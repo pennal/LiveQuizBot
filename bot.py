@@ -133,7 +133,7 @@ def craft_query_google(mode, question, answers):
         return DOMAIN + question
 
 
-def get_anwer_google(query, question, answers):
+def get_answer_google(query, answers):
     query = query.replace(' ', '+')
 
     r = requests.get(query, headers=headers)
@@ -177,9 +177,9 @@ def print_results(points, NEGATIVE_MODE):
     else:
         res = list(reversed(sorted(points.items(), key=operator.itemgetter(1))))
 
-    print('{}1: {}{} - score: {}'.format(Colors.BOLD, res[0][0].upper(), Colors.END, res[0][1]))
-    print('{}2: {}{} - score: {}'.format(Colors.BOLD, res[1][0].upper(), Colors.END, res[1][1]))
-    print('{}3: {}{} - score: {}'.format(Colors.BOLD, res[2][0].upper(), Colors.END, res[2][1]))
+    print('{}1: {}{} - score: {}'.format(Colors.BOLD + Colors.GREEN, res[0][0].upper(), Colors.END, res[0][1]))
+    print('{}2: {}{}- score: {}'.format(Colors.BOLD + Colors.RED, res[1][0].upper(), Colors.END, res[1][1]))
+    print('{}3: {}{} - score: {}'.format(Colors.BOLD + Colors.RED, res[2][0].upper(), Colors.END, res[2][1]))
 
 
 def random_string(N=16):
@@ -211,7 +211,7 @@ def do_question(pool, file=SCREENSHOT, debug=False):
 
     query = craft_query_google(QUERY, question_text, [first_answer_text, second_answer_text, third_answer_text])
     if debug: print(query)
-    points = get_anwer_google(query, question_text, [first_answer_text, second_answer_text, third_answer_text])
+    points = get_answer_google(query, [first_answer_text, second_answer_text, third_answer_text])
     print_results(points, NEGATIVE_MODE)
 
 
@@ -250,7 +250,7 @@ if __name__ == '__main__':
                 if not key:
                     screen = do_screenshot()
                     if screen == 0:
-                        do_question(pool,debug=False)
+                        do_question(pool, debug=False)
                 if key == 'q':
                     pool.close()
                     pool.join()
