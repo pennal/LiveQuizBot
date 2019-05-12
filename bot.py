@@ -125,25 +125,24 @@ def select_modes(question):
 
 def craft_query_google(mode, question, answers):
     if mode == 'BETWEEN':
-
-        return DOMAIN + question + ' AND (' + (answers[0] + ' OR ' if answers[0] != '' else '') + (
+        return [DOMAIN + question, DOMAIN + question + ' AND (' + (answers[0] + ' OR ' if answers[0] != '' else '') + (
             answers[1] + ' OR ' if answers[1] != '' else '') + (
-                   answers[2] if answers[2] != '' else '') + ')'
+                   answers[2] if answers[2] != '' else '') + ')']
     else:
-        return DOMAIN + question
+        return [DOMAIN + question]
 
 
-def get_answer_google(query, answers):
-    query = query.replace(' ', '+')
+def get_answer_google(data):
+    query = data[0].replace(' ', '+')
 
     r = requests.get(query, headers=headers)
     soup = BeautifulSoup(r.text, features="html.parser")
     all_links = soup.find_all('div', {'class': 'g'})
 
     points = {
-        answers[0]: 0,
-        answers[1]: 0,
-        answers[2]: 0
+        data[1]: 0,
+        data[2]: 0,
+        data[3]: 0
     }
 
     for link in all_links:
@@ -160,10 +159,10 @@ def get_answer_google(query, answers):
             c_title = clean(title)
             c_description = clean(description)
             for a in answer.lower().split(' '):
-                if a.strip() != '':
+                if a.strip() != '' and len(a) > 1:
                     count_title += sum(1 for _ in re.finditer(r'\b%s\b' % re.escape(a), c_title))
             for a in answer.lower().split(' '):
-                if a.strip() != '':
+                if a.strip() != ''  and len(a) > 1:
                     count_description = + sum(1 for _ in re.finditer(r'\b%s\b' % re.escape(a), c_description))
 
             points[answer] += count_title + count_description
@@ -211,7 +210,7 @@ def do_question(pool, file=SCREENSHOT, debug=False):
 
     query = craft_query_google(QUERY, question_text, [first_answer_text, second_answer_text, third_answer_text])
     if debug: print(query)
-    points = get_answer_google(query, [first_answer_text, second_answer_text, third_answer_text])
+    points = pool.map(get_answer_google, [])
     print_results(points, NEGATIVE_MODE)
 
 
@@ -233,12 +232,44 @@ def get_texts(file, pool=ThreadPool(3)):
     return unpack_texts([question_text] + answers_text)
 
 
+def do_answer(question_text, answers_text, right_answer):
+    NEGATIVE_MODE, QUERY = select_modes(question_text)
+
+    texts_clean = pool.map(clean, [question_text] + answers_text)
+    question_text, first_answer_text, second_answer_text, third_answer_text = unpack_texts(texts_clean)
+
+    queries = craft_query_google(QUERY, question_text, [first_answer_text, second_answer_text, third_answer_text])
+    total_points = {}
+    if len(queries) == 2:
+        points = pool.map(get_answer_google, [
+            [queries[0], first_answer_text, second_answer_text, third_answer_text],
+            [queries[1], first_answer_text, second_answer_text, third_answer_text]
+        ])
+        if list(points[0].values()).count(0) == 2 and not NEGATIVE_MODE:
+            total_points = points[0]
+        elif list(points[1].values()).count(0) == 2 and not NEGATIVE_MODE:
+            total_points = points[1]
+        else: total_points = {k: points[0].get(k, 0) + points[1].get(k, 0) for k in set(points[0]) | set(points[1])}
+    elif len(queries) == 1:
+        points = pool.map(get_answer_google, [
+            [queries[0], first_answer_text, second_answer_text, third_answer_text]
+        ])
+        total_points = points[0]
+
+    if NEGATIVE_MODE:
+        res = list(sorted(total_points.items(), key=operator.itemgetter(1)))
+    else:
+        res = list(reversed(sorted(total_points.items(), key=operator.itemgetter(1))))
+    return res[0][0].lower() == clean(right_answer['text'].lower())
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run a bootstrap node')
     sp = parser.add_mutually_exclusive_group()
     sp.add_argument('--live', help='Live game', action='store_true')
     sp.add_argument('--test', help='Test screens', action='store_true')
     sp.add_argument('--dump', help='Dump screens', action='store_true')
+    sp.add_argument('--test-id', help='Dump screens', type=int)
     args = parser.parse_args()
 
     pool = ThreadPool(3)
@@ -255,15 +286,31 @@ if __name__ == '__main__':
                     pool.close()
                     pool.join()
         elif args.test:
-            for file in files('screenshot'):
-                do_question(pool, 'screenshot.png', debug=True)
+            with open('dump.txt') as json_file:
+                data = json.load(json_file, strict=False)
+                total = len(data)
+                right = 0
+                not_right = []
+                for question in data:
+                    right_answer = list(filter(lambda x: x['correct'] == True, question['answers'].values()))
+                    if len(right_answer) == 0: continue
+                    else: right_answer = right_answer[0]
+                    res = do_answer(question['question'],
+                              [question['answers']['A']['text'], question['answers']['B']['text'], question['answers']['C']['text']],
+                              right_answer)
+                    if res: right += 1
+                    else:
+                        not_right.append(question)
+                print('{} out of {} have been answered correctly ({})'.format(right, total, right/total))
+                print(*not_right, sep='\n')
             pool.close()
             pool.join()
         elif args.dump:
             data = []
-            for file in files('screenshot'):
+            for index, file in enumerate(files('screenshot')):
                 texts = get_texts(file)
                 q = {
+                    'index': index,
                     'question': texts[0],
                     'answers': {
                         'A': {
@@ -283,6 +330,20 @@ if __name__ == '__main__':
                 data.append(q)
             with open("dump.txt", 'w+') as f:
                 f.write(json.dumps(data))
+            pool.close()
+            pool.join()
+        elif args.test_id:
+            with open('dump.txt') as json_file:
+                data = json.load(json_file, strict=False)
+                for question in data:
+                    if str(question['index']) != str(args.test_id): continue
+                    right_answer = list(filter(lambda x: x['correct'] == True, question['answers'].values()))
+                    if len(right_answer) == 0: continue
+                    else: right_answer = right_answer[0]
+                    res = do_answer(question['question'],
+                              [question['answers']['A']['text'], question['answers']['B']['text'], question['answers']['C']['text']],
+                              right_answer)
+                    break
             pool.close()
             pool.join()
     except KeyboardInterrupt as _:
