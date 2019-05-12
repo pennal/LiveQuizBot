@@ -188,7 +188,7 @@ def random_string(N=16):
 
 @timeit
 def do_question(pool, file=SCREENSHOT, debug=False):
-    if debug: copyfile('screenshot.png', 'screenshot/' + random_string() + '.png')
+    if not debug: copyfile('screenshot.png', 'screenshot/' + random_string() + '.png')
     img = Image.open(file)
     img = img.convert('LA')
     img = img.resize((1280, 1920), PIL.Image.ANTIALIAS)
@@ -235,52 +235,57 @@ def get_texts(file, pool=ThreadPool(3)):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run a bootstrap node')
-    parser.add_argument('--live', help='Live game', default=False, type=bool)
-    parser.add_argument('--test', help='Test screens', default=False, type=bool)
-    parser.add_argument('--dump', help='Dump screens', default=True, type=bool)
+    sp = parser.add_mutually_exclusive_group()
+    sp.add_argument('--live', help='Live game', action='store_true')
+    sp.add_argument('--test', help='Test screens', action='store_true')
+    sp.add_argument('--dump', help='Dump screens', action='store_true')
     args = parser.parse_args()
 
     pool = ThreadPool(3)
-
-    if args.live:
-        while True:
-            key = input("Press " + Colors.BOLD + Colors.GREEN + "ENTER" + Colors.END + " to take a screenshot" +
-                        " of the question or press " + Colors.BOLD + Colors.RED + "q" + Colors.END + " to quit: ")
-            if not key:
-                screen = do_screenshot()
-                if screen == 0:
-                    do_question(pool,debug=False)
-            if key == 'q':
-                pool.close()
-                pool.join()
-    elif args.test:
-        for file in files('screenshot'):
-            do_question(pool, 'screenshot.png', debug=True)
-        pool.close()
-        pool.join()
-    elif args.dump:
-        data = []
-        for file in files('screenshot'):
-            texts = get_texts(file)
-            q = {
-                'question': texts[0],
-                'answers': {
-                    'A': {
-                        'text': texts[1],
-                        'correct': False
-                    },
-                    'B': {
-                        'text': texts[2],
-                        'correct': False
-                    },
-                    'C': {
-                        'text': texts[3],
-                        'correct': False
+    try:
+        if args.live:
+            while True:
+                key = input("Press " + Colors.BOLD + Colors.GREEN + "ENTER" + Colors.END + " to take a screenshot" +
+                            " of the question or press " + Colors.BOLD + Colors.RED + "q" + Colors.END + " to quit: ")
+                if not key:
+                    screen = do_screenshot()
+                    if screen == 0:
+                        do_question(pool,debug=False)
+                if key == 'q':
+                    pool.close()
+                    pool.join()
+        elif args.test:
+            for file in files('screenshot'):
+                do_question(pool, 'screenshot.png', debug=True)
+            pool.close()
+            pool.join()
+        elif args.dump:
+            data = []
+            for file in files('screenshot'):
+                texts = get_texts(file)
+                q = {
+                    'question': texts[0],
+                    'answers': {
+                        'A': {
+                            'text': texts[1],
+                            'correct': False
+                        },
+                        'B': {
+                            'text': texts[2],
+                            'correct': False
+                        },
+                        'C': {
+                            'text': texts[3],
+                            'correct': False
+                        }
                     }
                 }
-            }
-            data.append(q)
-        with open("dump.txt", 'w+') as f:
-            f.write(json.dumps(data))
+                data.append(q)
+            with open("dump.txt", 'w+') as f:
+                f.write(json.dumps(data))
+            pool.close()
+            pool.join()
+    except KeyboardInterrupt as _:
         pool.close()
         pool.join()
+        exit(0)
