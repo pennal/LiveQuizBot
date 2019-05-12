@@ -1,10 +1,13 @@
 import argparse
+import json
 import operator
 import os
+import random
 import re
 import string
 import time
 from multiprocessing.pool import ThreadPool
+from shutil import copyfile
 
 import PIL
 import nltk
@@ -179,8 +182,13 @@ def print_results(points, NEGATIVE_MODE):
     print('{}3: {}{} - score: {}'.format(Colors.BOLD, res[2][0].upper(), Colors.END, res[2][1]))
 
 
+def random_string(N=16):
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=N))
+
+
 @timeit
 def do_question(pool, file=SCREENSHOT, debug=False):
+    if debug: copyfile('screenshot.png', 'screenshot/' + random_string() + '.png')
     img = Image.open(file)
     img = img.convert('LA')
     img = img.resize((1280, 1920), PIL.Image.ANTIALIAS)
@@ -202,14 +210,34 @@ def do_question(pool, file=SCREENSHOT, debug=False):
     question_text, first_answer_text, second_answer_text, third_answer_text = unpack_texts(texts_clean)
 
     query = craft_query_google(QUERY, question_text, [first_answer_text, second_answer_text, third_answer_text])
+    if debug: print(query)
     points = get_anwer_google(query, question_text, [first_answer_text, second_answer_text, third_answer_text])
     print_results(points, NEGATIVE_MODE)
+
+
+def get_texts(file, pool=ThreadPool(3)):
+    img = Image.open(file)
+    img = img.convert('LA')
+    img = img.resize((1280, 1920), PIL.Image.ANTIALIAS)
+    img_a = img.point(lambda x: 0 if x < 140 else 255)
+
+    w, h = img.size
+    question_text, space = question_image_to_text(img, QUESTION_BOUNDARIES(w, h))
+
+    answers_text = pool.map(answer_image_to_text, [
+        [img_a, FIRST_ANSWER_BOUNDARIES(w, h, space)],
+        [img_a, SECOND_ANSWER_BOUNDARIES(w, h, space)],
+        [img_a, THIRD_ANSWER_BOUNDARIES(w, h, space)]
+    ])
+
+    return unpack_texts([question_text] + answers_text)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run a bootstrap node')
     parser.add_argument('--live', help='Live game', default=False, type=bool)
-    parser.add_argument('--test', help='Test screen', default=True, type=bool)
+    parser.add_argument('--test', help='Test screens', default=False, type=bool)
+    parser.add_argument('--dump', help='Dump screens', default=True, type=bool)
     args = parser.parse_args()
 
     pool = ThreadPool(3)
@@ -221,14 +249,38 @@ if __name__ == '__main__':
             if not key:
                 screen = do_screenshot()
                 if screen == 0:
-                    do_question(pool)
+                    do_question(pool,debug=False)
             if key == 'q':
                 pool.close()
                 pool.join()
     elif args.test:
         for file in files('screenshot'):
-            do_question(pool, file, debug=True)
-            print('\n')
-
+            do_question(pool, 'screenshot.png', debug=True)
+        pool.close()
+        pool.join()
+    elif args.dump:
+        data = []
+        for file in files('screenshot'):
+            texts = get_texts(file)
+            q = {
+                'question': texts[0],
+                'answers': {
+                    'A': {
+                        'text': texts[1],
+                        'correct': False
+                    },
+                    'B': {
+                        'text': texts[2],
+                        'correct': False
+                    },
+                    'C': {
+                        'text': texts[3],
+                        'correct': False
+                    }
+                }
+            }
+            data.append(q)
+        with open("dump.txt", 'w+') as f:
+            f.write(json.dumps(data))
         pool.close()
         pool.join()

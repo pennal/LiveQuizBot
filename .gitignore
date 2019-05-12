@@ -236,4 +236,7 @@ dmypy.json
 pyvenv.cfg
 pip-selfcheck.json
 
+dump.txt
+screenshot.png
+
 # End of https://www.gitignore.io/api/git,venv,python,pycharm
