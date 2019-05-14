@@ -16,6 +16,7 @@ import unidecode
 from PIL import Image
 from bs4 import BeautifulSoup
 from pytesseract import pytesseract
+from num2words import num2words
 
 SCREENSHOT = 'screenshot.png'
 QUESTION_BOUNDARIES = lambda w, h: (35, 450, w - 35, h - 1170)
@@ -24,12 +25,14 @@ SECOND_ANSWER_BOUNDARIES = lambda w, h, space: (35, 910 + space, w - 120, h - 83
 THIRD_ANSWER_BOUNDARIES = lambda w, h, space: (35, 1130 + space, w - 120, h - 610 + space)
 
 BETWEEN_MODE_TERMS = ['tra quest', 'quale di quest', 'fra questi', 'tra loro', 'seleziona', 'tra i seguenti',
-                      'in quale']
+                      'in quale', 'chi tra']
 
 DOMAIN = "https://www.google.it/search?q="
 
+COMMA_REMOVE = ['come', 'perche', 'quando', 'chi', 'cosa', 'quale', 'qual']
+
 headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:49.0) Gecko/20100101 Firefox/49.0',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36',
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
     'Accept-Language': 'en-US,en;q=0.9,it;q=0.8,la;q=0.7',
     'Accept-Encoding': 'gzip, deflate',
@@ -99,6 +102,7 @@ def crop_image(img, area):
 
 def question_image_to_text(img, area):
     question_image = crop_image(img, area)
+    question_image.show()
     question_text = pytesseract.image_to_string(question_image, lang='ita')
     n_of_lines = question_text.count('\n') + 1
     question_text = question_text.replace('\n', ' ')
@@ -109,6 +113,11 @@ def question_image_to_text(img, area):
 def answer_image_to_text(data):
     answer_image = crop_image(data[0], data[1])
     answer_text = pytesseract.image_to_string(answer_image, lang='ita').replace('\n', ' ')
+    if answer_text == "":
+        w, h = answer_image.size
+        answer_image = crop_image(answer_image, (60, 20, 0.2 * w, h - 30)) # (35, 450, w - 35, h - 1170)
+        # answer_image.show()
+        answer_text = pytesseract.image_to_string(answer_image, lang='ita', config='--psm 6').replace('\n', ' ')
     return answer_text
 
 
@@ -120,6 +129,7 @@ def select_modes(question):
     question_lower = question.lower()
     NEGATIVE_MODE = 'NON' in question
     QUERY_MODE = 'BETWEEN' if any(term in question_lower for term in BETWEEN_MODE_TERMS) else 'DEFAULT'
+    QUERY_MODE = 'TERZETTO' if 'terzetto' in question and question.count("\"") == 4 else QUERY_MODE
     return NEGATIVE_MODE, QUERY_MODE
 
 
@@ -128,6 +138,12 @@ def craft_query_google(mode, question, answers):
         return [DOMAIN + question, DOMAIN + question + ' AND (' + (answers[0] + ' OR ' if answers[0] != '' else '') + (
             answers[1] + ' OR ' if answers[1] != '' else '') + (
                    answers[2] if answers[2] != '' else '') + ')']
+    if mode == 'TERZETTO':
+        return [
+            DOMAIN + question.replace('completa terzetto ', '') + ' AND ' + answers[0],
+            DOMAIN + question + ' AND ' + answers[1],
+            DOMAIN + question + ' AND ' + answers[2],
+        ]
     else:
         return [DOMAIN + question]
 
@@ -158,14 +174,25 @@ def get_answer_google(data):
             count_description = 0
             c_title = clean(title)
             c_description = clean(description)
-            for a in answer.lower().split(' '):
-                if a.strip() != '' and len(a) > 1:
-                    count_title += sum(1 for _ in re.finditer(r'\b%s\b' % re.escape(a), c_title))
-            for a in answer.lower().split(' '):
-                if a.strip() != ''  and len(a) > 1:
-                    count_description = + sum(1 for _ in re.finditer(r'\b%s\b' % re.escape(a), c_description))
+            if data[4] == 'DEFAULT' or data[4] == 'BETWEEN':
+                for a in answer.lower().split(' '):
+                    if a.strip() != '' and (len(a) > 1 or a.isdigit()):
+                        count_title += sum(1 for _ in re.finditer(r'\b%s\b' % re.escape(a), c_title))
+                        if a.isdigit():
+                            int_to_word = num2words(int(a), lang='it')
+                            count_title += sum(1 for _ in re.finditer(r'\b%s\b' % re.escape(int_to_word), c_title))
+                for a in answer.lower().split(' '):
+                    if a.strip() != ''  and (len(a) > 1 or a.isdigit()):
+                        count_description = + sum(1 for _ in re.finditer(r'\b%s\b' % re.escape(a), c_description))
+                        if a.isdigit():
+                            int_to_word = num2words(int(a), lang='it')
+                            count_description += sum(1 for _ in re.finditer(r'\b%s\b' % re.escape(int_to_word), c_title))
 
-            points[answer] += count_title + count_description
+                points[answer] += count_title + count_description
+            elif data[4] == 'TERZETTO':
+                count_title += sum(1 for _ in re.finditer(r'\b%s\b' % re.escape(answer), c_title))
+                count_description = + sum(1 for _ in re.finditer(r'\b%s\b' % re.escape(answer), c_description))
+                points[answer] += count_title + count_description
 
     return points
 
@@ -205,13 +232,47 @@ def do_question(pool, file=SCREENSHOT, debug=False):
 
     NEGATIVE_MODE, QUERY = select_modes(question_text)
 
+    if QUERY == "DEFAULT":
+        question = question_text.lower().split(', ')
+        for q in question:
+            if any(word in q for word in COMMA_REMOVE):
+
+                question_text = q
+                break
+
     texts_clean = pool.map(clean, [question_text] + answers_text)
     question_text, first_answer_text, second_answer_text, third_answer_text = unpack_texts(texts_clean)
 
-    query = craft_query_google(QUERY, question_text, [first_answer_text, second_answer_text, third_answer_text])
-    if debug: print(query)
-    points = pool.map(get_answer_google, [])
-    print_results(points, NEGATIVE_MODE)
+    queries = craft_query_google(QUERY, question_text, [first_answer_text, second_answer_text, third_answer_text])
+    print(queries)
+
+    total_points = {}
+    if len(queries) == 2:
+        points = pool.map(get_answer_google, [
+            [queries[0], first_answer_text, second_answer_text, third_answer_text, 'BETWEEN'],
+            [queries[1], first_answer_text, second_answer_text, third_answer_text, 'BETWEEN']
+        ])
+        if list(points[0].values()).count(0) == 2 and not NEGATIVE_MODE:
+            total_points = points[0]
+        elif list(points[1].values()).count(0) == 2 and not NEGATIVE_MODE:
+            total_points = points[1]
+        else:
+            total_points = {k: points[0].get(k, 0) + points[1].get(k, 0) for k in set(points[0]) | set(points[1])}
+    elif len(queries) == 1:
+        points = pool.map(get_answer_google, [
+            [queries[0], first_answer_text, second_answer_text, third_answer_text, 'DEFAULT']
+        ])
+        total_points = points[0]
+    elif len(queries) == 3:
+        points = pool.map(get_answer_google, [
+            [queries[0], first_answer_text, second_answer_text, third_answer_text, 'TERZETTO'],
+            [queries[1], first_answer_text, second_answer_text, third_answer_text, 'TERZETTO'],
+            [queries[2], first_answer_text, second_answer_text, third_answer_text, 'TERZETTO']
+        ])
+        total_points = {k: points[0].get(k, 0) + points[1].get(k, 0) for k in set(points[0]) | set(points[1])}
+        total_points = {k: total_points.get(k, 0) + points[2].get(k, 0) for k in set(total_points) | set(points[2])}
+
+    print_results(total_points, NEGATIVE_MODE)
 
 
 def get_texts(file, pool=ThreadPool(3)):
@@ -235,26 +296,48 @@ def get_texts(file, pool=ThreadPool(3)):
 def do_answer(question_text, answers_text, right_answer):
     NEGATIVE_MODE, QUERY = select_modes(question_text)
 
+    if QUERY == "DEFAULT":
+        question = question_text.lower().split(', ')
+        for q in question:
+            if any(word in q for word in COMMA_REMOVE):
+                question_text = q
+                break
+
     texts_clean = pool.map(clean, [question_text] + answers_text)
     question_text, first_answer_text, second_answer_text, third_answer_text = unpack_texts(texts_clean)
 
     queries = craft_query_google(QUERY, question_text, [first_answer_text, second_answer_text, third_answer_text])
+    print(queries)
+
     total_points = {}
     if len(queries) == 2:
         points = pool.map(get_answer_google, [
-            [queries[0], first_answer_text, second_answer_text, third_answer_text],
-            [queries[1], first_answer_text, second_answer_text, third_answer_text]
+            [queries[0], first_answer_text, second_answer_text, third_answer_text, 'BETWEEN'],
+            [queries[1], first_answer_text, second_answer_text, third_answer_text, 'BETWEEN']
         ])
         if list(points[0].values()).count(0) == 2 and not NEGATIVE_MODE:
             total_points = points[0]
         elif list(points[1].values()).count(0) == 2 and not NEGATIVE_MODE:
             total_points = points[1]
-        else: total_points = {k: points[0].get(k, 0) + points[1].get(k, 0) for k in set(points[0]) | set(points[1])}
+        else:
+            total_points = {k: points[0].get(k, 0) + points[1].get(k, 0) for k in set(points[0]) | set(points[1])}
     elif len(queries) == 1:
         points = pool.map(get_answer_google, [
-            [queries[0], first_answer_text, second_answer_text, third_answer_text]
+            [queries[0], first_answer_text, second_answer_text, third_answer_text, 'DEFAULT']
         ])
         total_points = points[0]
+    elif len(queries) == 3:
+        points = pool.map(get_answer_google, [
+            [queries[0], first_answer_text, second_answer_text, third_answer_text, 'TERZETTO'],
+            [queries[1], first_answer_text, second_answer_text, third_answer_text, 'TERZETTO'],
+            [queries[2], first_answer_text, second_answer_text, third_answer_text, 'TERZETTO']
+        ])
+        total_points = {k: points[0].get(k, 0) + points[1].get(k, 0) for k in set(points[0]) | set(points[1])}
+        total_points = {k: total_points.get(k, 0) + points[2].get(k, 0) for k in set(total_points) | set(points[2])}
+
+    # print_results(total_points, NEGATIVE_MODE)
+
+    print(total_points)
 
     if NEGATIVE_MODE:
         res = list(sorted(total_points.items(), key=operator.itemgetter(1)))
@@ -269,6 +352,7 @@ if __name__ == '__main__':
     sp.add_argument('--live', help='Live game', action='store_true')
     sp.add_argument('--test', help='Test screens', action='store_true')
     sp.add_argument('--dump', help='Dump screens', action='store_true')
+    sp.add_argument('--feature', help='Dump screens', action='store_true')
     sp.add_argument('--test-id', help='Dump screens', type=int)
     args = parser.parse_args()
 
@@ -298,8 +382,11 @@ if __name__ == '__main__':
                     res = do_answer(question['question'],
                               [question['answers']['A']['text'], question['answers']['B']['text'], question['answers']['C']['text']],
                               right_answer)
-                    if res: right += 1
+                    if res:
+                        right += 1
+                        print('ok')
                     else:
+                        print(question)
                         not_right.append(question)
                 print('{} out of {} have been answered correctly ({})'.format(right, total, right/total))
                 print(*not_right, sep='\n')
@@ -308,6 +395,7 @@ if __name__ == '__main__':
         elif args.dump:
             data = []
             for index, file in enumerate(files('screenshot')):
+                print(file)
                 texts = get_texts(file)
                 q = {
                     'index': index,
@@ -335,6 +423,7 @@ if __name__ == '__main__':
         elif args.test_id:
             with open('dump.txt') as json_file:
                 data = json.load(json_file, strict=False)
+                print(data)
                 for question in data:
                     if str(question['index']) != str(args.test_id): continue
                     right_answer = list(filter(lambda x: x['correct'] == True, question['answers'].values()))
@@ -343,9 +432,17 @@ if __name__ == '__main__':
                     res = do_answer(question['question'],
                               [question['answers']['A']['text'], question['answers']['B']['text'], question['answers']['C']['text']],
                               right_answer)
+                    if res == False:
+                        print(question)
+                    else:
+                        print('ok')
                     break
             pool.close()
             pool.join()
+        elif args.feature:
+            for index, file in enumerate(files('feature')):
+                if file.split('.')[1] == 'jpg' or file.split('.')[1] == 'png':
+                    do_question(pool, file, debug=True)
     except KeyboardInterrupt as _:
         pool.close()
         pool.join()
