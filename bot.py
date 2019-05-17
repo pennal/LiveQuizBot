@@ -23,9 +23,9 @@ QUESTION_BOUNDARIES = lambda w, h: (35, 450, w - 35, h - 1170)
 FIRST_ANSWER_BOUNDARIES = lambda w, h, space: (35, 690 + space, w - 120, h - 1050 + space)
 SECOND_ANSWER_BOUNDARIES = lambda w, h, space: (35, 910 + space, w - 120, h - 830 + space)
 THIRD_ANSWER_BOUNDARIES = lambda w, h, space: (35, 1130 + space, w - 120, h - 610 + space)
-
 BETWEEN_MODE_TERMS = ['tra quest', 'quale di quest', 'fra questi', 'tra loro', 'seleziona', 'tra i seguenti',
                       'in quale', 'chi tra']
+COORD_MODE_TERMS = ['nord', 'sud', 'ovest', 'est']
 
 DOMAIN = "https://www.google.it/search?q="
 
@@ -102,7 +102,7 @@ def crop_image(img, area):
 
 def question_image_to_text(img, area):
     question_image = crop_image(img, area)
-    question_image.show()
+    # question_image.show()
     question_text = pytesseract.image_to_string(question_image, lang='ita')
     n_of_lines = question_text.count('\n') + 1
     question_text = question_text.replace('\n', ' ')
@@ -130,6 +130,7 @@ def select_modes(question):
     NEGATIVE_MODE = 'NON' in question
     QUERY_MODE = 'BETWEEN' if any(term in question_lower for term in BETWEEN_MODE_TERMS) else 'DEFAULT'
     QUERY_MODE = 'TERZETTO' if 'terzetto' in question and question.count("\"") == 4 else QUERY_MODE
+    QUERY_MODE = 'COORD' if any(term in question_lower for term in COORD_MODE_TERMS) else QUERY_MODE
     return NEGATIVE_MODE, QUERY_MODE
 
 
@@ -144,6 +145,11 @@ def craft_query_google(mode, question, answers):
             DOMAIN + question + ' AND ' + answers[1],
             DOMAIN + question + ' AND ' + answers[2],
         ]
+    if mode == 'COORD':
+        return [DOMAIN + answers[0] + ' coordinates',
+                DOMAIN + answers[1] + ' coordinates',
+                DOMAIN + answers[2] + ' coordinates'
+        ]
     else:
         return [DOMAIN + question]
 
@@ -154,7 +160,8 @@ def get_answer_google(data):
     r = requests.get(query, headers=headers)
     soup = BeautifulSoup(r.text, features="html.parser")
     all_links = soup.find_all('div', {'class': 'g'})
-
+    if data[4] == 'COORD':
+        return soup.find('div', {'class', 'Z0LcW'}).text.strip()
     points = {
         data[1]: 0,
         data[2]: 0,
@@ -167,6 +174,8 @@ def get_answer_google(data):
             description = link.find('div', {'class': 's'}).find('span', {'class': 'st'}).text.lower()
         except Exception as e:
             continue
+
+
 
         for answer in points.keys():
             if answer == ''.strip(): continue
@@ -232,6 +241,7 @@ def do_question(pool, file=SCREENSHOT, debug=False):
 
     NEGATIVE_MODE, QUERY = select_modes(question_text)
 
+
     if QUERY == "DEFAULT":
         question = question_text.lower().split(', ')
         for q in question:
@@ -245,6 +255,7 @@ def do_question(pool, file=SCREENSHOT, debug=False):
 
     queries = craft_query_google(QUERY, question_text, [first_answer_text, second_answer_text, third_answer_text])
     print(queries)
+
 
     total_points = {}
     if len(queries) == 2:
@@ -264,13 +275,21 @@ def do_question(pool, file=SCREENSHOT, debug=False):
         ])
         total_points = points[0]
     elif len(queries) == 3:
-        points = pool.map(get_answer_google, [
-            [queries[0], first_answer_text, second_answer_text, third_answer_text, 'TERZETTO'],
-            [queries[1], first_answer_text, second_answer_text, third_answer_text, 'TERZETTO'],
-            [queries[2], first_answer_text, second_answer_text, third_answer_text, 'TERZETTO']
-        ])
-        total_points = {k: points[0].get(k, 0) + points[1].get(k, 0) for k in set(points[0]) | set(points[1])}
-        total_points = {k: total_points.get(k, 0) + points[2].get(k, 0) for k in set(total_points) | set(points[2])}
+        if QUERY == 'COORD':
+            coordinates = pool.map(get_answer_google, [
+                [queries[0], first_answer_text, second_answer_text, third_answer_text, 'COORD'],
+                [queries[1], first_answer_text, second_answer_text, third_answer_text, 'COORD'],
+                [queries[2], first_answer_text, second_answer_text, third_answer_text, 'COORD']
+            ])
+            total_points = get_points_from_coords(question_text, coordinates, [first_answer_text, second_answer_text, third_answer_text])
+        else:
+            points = pool.map(get_answer_google, [
+                [queries[0], first_answer_text , second_answer_text, third_answer_text, 'TERZETTO'],
+                [queries[1], first_answer_text, second_answer_text, third_answer_text, 'TERZETTO'],
+                [queries[2], first_answer_text, second_answer_text, third_answer_text, 'TERZETTO']
+            ])
+            total_points = {k: points[0].get(k, 0) + points[1].get(k, 0) for k in set(points[0]) | set(points[1])}
+            total_points = {k: total_points.get(k, 0) + points[2].get(k, 0) for k in set(total_points) | set(points[2])}
 
     print_results(total_points, NEGATIVE_MODE)
 
@@ -291,6 +310,69 @@ def get_texts(file, pool=ThreadPool(3)):
     ])
 
     return unpack_texts([question_text] + answers_text)
+
+def get_points_from_coords(question, coordinates, answers):
+    direction = list(filter(lambda x: x in COORD_MODE_TERMS, question.split(' ')))[0]
+    south_bucket = []
+    east_bucket = []
+    north_bucket = []
+    west_bucket = []
+    answer_dict = {}
+
+    for idx, coordinate in enumerate(coordinates):
+        latLong = coordinate.split(', ')
+        lat_orientation = latLong[0].split('° ')[1]
+        lat_value = float(latLong[0].split('° ')[0])
+        lon_orientation = latLong[1].split('° ')[1]
+        lon_value = float(latLong[1].split('° ')[0])
+        answer_dict[lat_value] = idx
+        answer_dict[lon_value] = idx
+        if lat_orientation == 'S':
+            south_bucket.append(lat_value)
+        elif lat_orientation == 'N':
+            north_bucket.append(lat_value)
+        if lon_orientation == 'W':
+            west_bucket.append(lon_value)
+        elif lon_orientation == 'E':
+            east_bucket.append(lon_value)
+
+    lowest_value = 0
+    if direction == 'sud':
+        if len(south_bucket) > 0:
+            south_bucket.sort(reverse=True)
+            lowest_value = south_bucket[0]
+        else:
+            north_bucket.sort()
+            lowest_value = north_bucket[0]
+    elif(direction == 'nord'):
+        if len(north_bucket) > 0:
+            north_bucket.sort(reverse=True)
+            lowest_value = north_bucket[0]
+        else:
+            south_bucket.sort()
+            lowest_value = south_bucket[0]
+    elif (direction == 'est'):
+        if len(east_bucket) > 0:
+            east_bucket.sort(reverse=True)
+            lowest_value = east_bucket[0]
+        else:
+            west_bucket.sort()
+            lowest_value = west_bucket[0]
+    elif (direction == 'ovest'):
+        if len(west_bucket) > 0:
+            west_bucket.sort(reverse=True)
+            lowest_value = west_bucket[0]
+        else:
+            east_bucket.sort()
+            lowest_value = east_bucket[0]
+
+    lowest_answer = answer_dict[lowest_value]
+
+    return {
+        answers[0]: 1 if lowest_answer == 0 else 0,
+        answers[1]: 1 if lowest_answer == 1 else 0,
+        answers[2]: 1 if lowest_answer == 2 else 0,
+    }
 
 
 def do_answer(question_text, answers_text, right_answer):
@@ -327,15 +409,23 @@ def do_answer(question_text, answers_text, right_answer):
         ])
         total_points = points[0]
     elif len(queries) == 3:
-        points = pool.map(get_answer_google, [
-            [queries[0], first_answer_text, second_answer_text, third_answer_text, 'TERZETTO'],
-            [queries[1], first_answer_text, second_answer_text, third_answer_text, 'TERZETTO'],
-            [queries[2], first_answer_text, second_answer_text, third_answer_text, 'TERZETTO']
-        ])
-        total_points = {k: points[0].get(k, 0) + points[1].get(k, 0) for k in set(points[0]) | set(points[1])}
-        total_points = {k: total_points.get(k, 0) + points[2].get(k, 0) for k in set(total_points) | set(points[2])}
+        if QUERY == 'COORD':
+            coordinates = pool.map(get_answer_google, [
+                [queries[0], first_answer_text, second_answer_text, third_answer_text, 'COORD'],
+                [queries[1], first_answer_text, second_answer_text, third_answer_text, 'COORD'],
+                [queries[2], first_answer_text, second_answer_text, third_answer_text, 'COORD']
+            ])
+            total_points = get_points_from_coords(question_text, coordinates, [first_answer_text, second_answer_text, third_answer_text])
+        else:
+            points = pool.map(get_answer_google, [
+                [queries[0], first_answer_text, second_answer_text, third_answer_text, 'TERZETTO'],
+                [queries[1], first_answer_text, second_answer_text, third_answer_text, 'TERZETTO'],
+                [queries[2], first_answer_text, second_answer_text, third_answer_text, 'TERZETTO']
+            ])
+            total_points = {k: points[0].get(k, 0) + points[1].get(k, 0) for k in set(points[0]) | set(points[1])}
+            total_points = {k: total_points.get(k, 0) + points[2].get(k, 0) for k in set(total_points) | set(points[2])}
 
-    # print_results(total_points, NEGATIVE_MODE)
+    print_results(total_points, NEGATIVE_MODE)
 
     print(total_points)
 
