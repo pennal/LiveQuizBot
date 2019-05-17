@@ -146,10 +146,16 @@ def craft_query_google(mode, question, answers):
             DOMAIN + question + ' AND ' + answers[2],
         ]
     if mode == 'COORD':
-        return [DOMAIN + answers[0] + ' coordinates',
+        if 'stat' in question:
+            return [DOMAIN + answers[0] + ' coordinates',
                 DOMAIN + answers[1] + ' coordinates',
                 DOMAIN + answers[2] + ' coordinates'
-        ]
+            ]
+        else:
+            return [DOMAIN + answers[0] + ' city coordinates',
+                    DOMAIN + answers[1] + ' city coordinates',
+                    DOMAIN + answers[2] + ' city coordinates'
+                    ]
     else:
         return [DOMAIN + question]
 
