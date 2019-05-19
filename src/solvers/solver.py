@@ -75,30 +75,35 @@ class Solver(ABC):
             self.copy.to_lower('third_answer'): 0
         }
 
-        # TODO: parallelize
-        for link in all_links:
-            try:
-                title = link.find('div', {'class': 'r'}).find('h3').text.lower()
-                description = link.find('div', {'class': 's'}).find('span', {'class': 'st'}).text.lower()
-            except Exception as e:
-                continue
+        # TODO: better parallelize
+        args = [[link, deepcopy(points)] for link in all_links]
+        res = ThreadPool(3).map(self.get_points_link, args)
+        res = list(filter(lambda x: x is not None, res))
+        res = ({k: sum([x[k] for x in res if k in x]) for i in res for k, v in i.items()})
+        return res
 
-            for answer in points.keys():
-                count_title = 0
-                count_description = 0
+    def get_points_link(self, data):
+        try:
+            title = data[0].find('div', {'class': 'r'}).find('h3').text.lower()
+            description = data[0].find('div', {'class': 's'}).find('span', {'class': 'st'}).text.lower()
+        except Exception as e:
+            return None
 
-                for word in answer.split(' '):
-                    if word.strip() and (len(word) > 1 or word.isdigit()):
-                        count_title += sum(1 for _ in self.find_occurences(title, word))
-                        count_description += sum(1 for _ in self.find_occurences(description, word))
-                        if word.isdigit():
-                            int_to_word = num2words(int(word), lang='it')
-                            count_title += sum(1 for _ in self.find_occurences(title, int_to_word))
-                            count_description += sum(1 for _ in self.find_occurences(description, int_to_word))
+        for answer in data[1].keys():
+            count_title = 0
+            count_description = 0
 
-                points[answer] += count_title + count_description
+            for word in answer.split(' '):
+                if word.strip() and (len(word) > 1 or word.isdigit()):
+                    count_title += sum(1 for _ in self.find_occurences(title, word))
+                    count_description += sum(1 for _ in self.find_occurences(description, word))
+                    if word.isdigit():
+                        int_to_word = num2words(int(word), lang='it')
+                        count_title += sum(1 for _ in self.find_occurences(title, int_to_word))
+                        count_description += sum(1 for _ in self.find_occurences(description, int_to_word))
 
-        return points
+            data[1][answer] += count_title + count_description
+        return data[1]
 
     def select_points(self, points):
         return points[0]
