@@ -20,7 +20,6 @@ from src.requester import req
 
 @dataclass
 class Solver(ABC):
-
     pool: ThreadPool
     type: SolverType
     original: Instance = field(init=False)

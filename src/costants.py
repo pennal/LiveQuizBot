@@ -11,7 +11,7 @@ class Colors:
 
 
 INPUT_SENTENCE = "Press " + Colors.BOLD + Colors.GREEN + "ENTER" + Colors.END + " to take a screenshot" + \
-                            " of the question or press " + Colors.BOLD + Colors.RED + "q" + Colors.END + " to quit: "
+                 " of the question or press " + Colors.BOLD + Colors.RED + "q" + Colors.END + " to quit: "
 
 SCREENSHOT = 'screenshot.png'
 

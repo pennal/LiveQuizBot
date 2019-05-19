@@ -15,9 +15,9 @@ class Coord(Solver):
     def craft_queries(self):
         if 'stat' in self.copy.question:
             return [DOMAIN + self.copy.first_answer + ' coordinates',
-                DOMAIN + self.copy.second_answer + ' coordinates',
-                DOMAIN + self.copy.third_answer + ' coordinates'
-            ]
+                    DOMAIN + self.copy.second_answer + ' coordinates',
+                    DOMAIN + self.copy.third_answer + ' coordinates'
+                    ]
         else:
             return [DOMAIN + self.copy.first_answer + ' city coordinates',
                     DOMAIN + self.copy.second_answer + ' city coordinates',
@@ -93,4 +93,3 @@ class Coord(Solver):
             self.copy.second_answer: 1 if lowest_answer == 1 else 0,
             self.copy.third_answer: 1 if lowest_answer == 2 else 0,
         }
-

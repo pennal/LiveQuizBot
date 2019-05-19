@@ -11,8 +11,9 @@ from src.utlity import files, timeit
 def do_screenshot():
     return os.system("adb exec-out screencap -p > " + SCREENSHOT)
 
+
 @timeit
-def do_question(pool: ThreadPool, file: str=SCREENSHOT, debug: bool=False):
+def do_question(pool: ThreadPool, file: str = SCREENSHOT, debug: bool = False):
     instance = img_to_text(file, pool, debug)
     switch = Switch(pool)
     switch.run(instance)

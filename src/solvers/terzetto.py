@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
 from src.costants import DOMAIN
-from src.parallel_process import parallel_execution
 from src.solvers.solver import Solver
 
 

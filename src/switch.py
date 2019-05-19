@@ -11,7 +11,6 @@ from src.solvers.terzetto import Terzetto
 
 @dataclass
 class Switch:
-
     pool: ThreadPool
     solvers: List = field(default_factory=lambda: [])
 
@@ -20,8 +19,8 @@ class Switch:
             Coord(self.pool, SolverType.COORD),
             Terzetto(self.pool, SolverType.TERZETTO),
             Between(self.pool, SolverType.BETWEEN),
-            Default(self.pool,  SolverType.DEFAULT)
-        ] # Ordered by importance
+            Default(self.pool, SolverType.DEFAULT)
+        ]  # Ordered by importance
 
     def run(self, instance: Instance):
         for solver in self.solvers:

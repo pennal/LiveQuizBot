@@ -12,7 +12,8 @@ class Between(Solver):
 
     def craft_queries(self):
         return [DOMAIN + self.copy.question,
-                DOMAIN + self.copy.question + ' AND ({} OR {} OR {})'.format(self.copy.first_answer, self.copy.second_answer,
+                DOMAIN + self.copy.question + ' AND ({} OR {} OR {})'.format(self.copy.first_answer,
+                                                                             self.copy.second_answer,
                                                                              self.copy.third_answer)
                 ]
 

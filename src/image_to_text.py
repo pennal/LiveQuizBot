@@ -7,7 +7,6 @@ from pytesseract import pytesseract
 
 from src.instance import Instance
 from src.parallel_process import parallel_execution
-from src.utlity import timeit
 
 QUESTION_BOUNDARIES = lambda w, h: (35, 450, w - 35, h - 1170)
 FIRST_ANSWER_BOUNDARIES = lambda w, h, space: (35, 690 + space, w - 120, h - 1050 + space)
@@ -70,5 +69,3 @@ def img_to_text(file_path: str, pool: ThreadPool, debug: bool) -> Instance:
     question_text, question_size = question_to_text(img, w, h, debug)
     answers_text = answers_to_text(img, w, h, question_size, pool, debug)
     return Instance.create_instance(question_text, answers_text[0], answers_text[1], answers_text[2])
-
-

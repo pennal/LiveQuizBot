@@ -25,4 +25,3 @@ def files(path):
         for file in f:
             files.append(os.path.join(r, file))
     return files
-
