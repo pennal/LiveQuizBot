@@ -123,7 +123,6 @@ class Solver(ABC):
 
     def solve(self, instance):
         self._init(instance)
-        print(self.original.question)
         self.clean()
         queries = self.craft_queries()
         self.count_points(queries)
