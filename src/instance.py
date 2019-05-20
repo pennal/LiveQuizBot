@@ -1,8 +1,10 @@
 import string
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import List
 
 from src.costants import BETWEEN_MODE_TERMS, COORD_MODE_TERMS, INSTAGRAM_MODE_TERMS
+from src.utlity import ner_extractor
 
 
 class SolverType(Enum):
@@ -10,6 +12,7 @@ class SolverType(Enum):
     TERZETTO = 20
     COORD = 30
     INSTAGRAM = 40
+    SINGLE_NER = 50
     DEFAULT = 0
 
 
@@ -22,10 +25,26 @@ class Instance:
     solver: SolverType = field(init=False)
     is_negative: bool = field(init=False)
     correct_answer: int = 0
+    ner_question: List = field(default_factory=lambda: [])
+    ner_first_answer: List = field(default_factory=lambda: [])
+    ner_second_answer: List = field(default_factory=lambda: [])
+    ner_third_answer: List = field(default_factory=lambda: [])
 
     def __post_init__(self):
         question_lower = self.to_lower('question')
         self.is_negative = 'NON' in self.question
+
+        self.ner_question = ner_extractor(self.question)
+
+        self.ner_first_answer = ner_extractor(self.first_answer)
+        print(self.ner_first_answer)
+        self.is_first_complete_ner = len(self.ner_first_answer) > 0 and self.ner_first_answer[0][0] == self.first_answer
+        self.ner_second_answer = ner_extractor(self.second_answer)
+        print(self.ner_second_answer)
+        self.is_second_complete_ner = len(self.ner_second_answer) > 0 and self.ner_second_answer[0][0] == self.second_answer
+        self.ner_third_answer = ner_extractor(self.third_answer)
+        print(self.ner_third_answer)
+        self.is_third_complete_ner = len(self.ner_third_answer) > 0 and self.ner_third_answer[0][0] == self.third_answer
 
         # solver type are ordered from less to more important
         solver = SolverType.BETWEEN if any(
@@ -37,6 +56,9 @@ class Instance:
         solver = SolverType.INSTAGRAM if any(
             term in question_lower.translate(str.maketrans('', '', string.punctuation)).split(' ') for term in
             INSTAGRAM_MODE_TERMS) else solver
+        solver = SolverType.SINGLE_NER if question_lower.count("\"") == 2 and len(self.ner_question) == 1 and self.ner_question[0][0].lower() != question_lower.split('"')[1] else solver
+
+        print(solver)
 
         self.solver = solver
 

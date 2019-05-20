@@ -33,13 +33,17 @@ class Solver(ABC):
     def clean_impl(self, f):
         to_clean = self.copy.__dict__[f]
         if len(to_clean.split(' ')) == 1: return
+        if (f == 'first_answer' and self.copy.is_first_complete_ner) or (f == 'second_answer' and self.copy.is_second_complete_ner) or (f == 'third_answer' and self.copy.is_third_complete_ner):
+            to_clean = to_clean.lower().replace('ii ', '')
+            self.copy.__dict__[f] = to_clean
+            return
         word_tokenized_list = nltk.tokenize.word_tokenize(to_clean)
         word_tokenized_no_punct = [x.lower() for x in word_tokenized_list if x not in string.punctuation]
         word_tokenized_no_punct_no_sw = [x for x in word_tokenized_no_punct if
                                          x not in set(IT_STOP_WORDS)]
         word_tokenized_no_punct_no_sw_no_apostrophe = [x.split("'") for x in word_tokenized_no_punct_no_sw]
         word_tokenized_no_punct_no_sw_no_apostrophe = [y for x in word_tokenized_no_punct_no_sw_no_apostrophe for y in
-                                                       x]
+                                                            x]
 
         self.copy.__dict__[f] = ' '.join(unidecode(' '.join(word_tokenized_no_punct_no_sw_no_apostrophe)).split())
 
@@ -90,20 +94,29 @@ class Solver(ABC):
         except Exception as e:
             return data[1]
 
-        for answer in data[1].keys():
+        for index, answer in enumerate(data[1].keys()):
             count_title = 0
             count_description = 0
 
-            for word in answer.split(' '):
-                if word.strip() and (len(word) > 1 or word.isdigit()):
-                    count_title += sum(1 for _ in self.find_occurences(title, word))
-                    count_description += sum(1 for _ in self.find_occurences(description, word))
-                    if word.isdigit():
-                        int_to_word = num2words(int(word), lang='it')
-                        count_title += sum(1 for _ in self.find_occurences(title, int_to_word))
-                        count_description += sum(1 for _ in self.find_occurences(description, int_to_word))
+            if (index == 0 and self.copy.is_first_complete_ner) or (index == 1 and self.copy.is_second_complete_ner) or (index == 2 and self.copy.is_third_complete_ner):
+                count_title += sum(1 for _ in self.find_occurences(title, answer))
+                if count_title == 0: count_title += 1 if any(
+                        ' ' + term + ' ' in title for term in answer.split(' ')) else 0
+                count_description += sum(1 for _ in self.find_occurences(description, answer))
+                if count_description == 0: count_description += 1 if any(
+                        term in description for term in answer.split(' ')) else 0
+                data[1][answer] += count_title + count_description
+            else:
+                for word in answer.split(' '):
+                    if word.strip() and (len(word) > 1 or word.isdigit()):
+                        count_title += sum(1 for _ in self.find_occurences(title, word))
+                        count_description += sum(1 for _ in self.find_occurences(description, word))
+                        if word.isdigit():
+                            int_to_word = num2words(int(word), lang='it')
+                            count_title += sum(1 for _ in self.find_occurences(title, int_to_word))
+                            count_description += sum(1 for _ in self.find_occurences(description, int_to_word))
 
-            data[1][answer] += count_title + count_description
+                data[1][answer] += count_title + count_description
         return data[1]
 
     def select_points(self, points):

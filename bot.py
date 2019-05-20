@@ -17,7 +17,7 @@ def do_screenshot():
 @timeit
 def do_question(pool: ThreadPool, file: str = SCREENSHOT, debug: bool = False):
     instance = img_to_text(file, pool, debug)
-    if debug: print(instance.question)
+    print(instance.question)
     switch = Switch(pool)
     switch.run(instance)
 
@@ -46,7 +46,7 @@ if __name__ == '__main__':
         elif args.test:
             for index, file in enumerate(files('test')):
                 if file.split('.')[1] == 'jpg' or file.split('.')[1] == 'png':
-                    do_question(pool, file, debug=True)
+                    do_question(pool, file, debug=False)
                     key = input()
                     if key == 'y':
                         move(file, 'screenshot/' + file.split('/')[1])
