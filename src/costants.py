@@ -16,7 +16,7 @@ INPUT_SENTENCE = "Press " + Colors.BOLD + Colors.GREEN + "ENTER" + Colors.END + 
 SCREENSHOT = 'screenshot.png'
 
 BETWEEN_MODE_TERMS = ['tra quest', 'quale di quest', 'fra questi', 'tra loro', 'seleziona', 'tra i seguenti',
-                      'in quale', 'chi tra']
+                      'in quale', 'chi tra', 'da che']
 
 COORD_MODE_TERMS = ['nord', 'sud', 'ovest', 'est']
 

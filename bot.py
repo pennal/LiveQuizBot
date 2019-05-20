@@ -1,6 +1,7 @@
 import argparse
 import os
 from multiprocessing.pool import ThreadPool
+from shutil import copyfile, move
 
 from src.costants import SCREENSHOT, INPUT_SENTENCE
 from src.image_to_text import img_to_text
@@ -47,6 +48,9 @@ if __name__ == '__main__':
             for index, file in enumerate(files('feature')):
                 if file.split('.')[1] == 'jpg' or file.split('.')[1] == 'png':
                     do_question(pool, file, debug=False)
+                    key = input()
+                    if key == 'y':
+                        move(file, 'screenshot/' + file.split('/')[1])
     except KeyboardInterrupt as _:
         pool.close()
         pool.join()
