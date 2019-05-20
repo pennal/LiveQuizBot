@@ -2,13 +2,14 @@ import string
 from dataclasses import dataclass, field
 from enum import Enum
 
-from src.costants import BETWEEN_MODE_TERMS, COORD_MODE_TERMS
+from src.costants import BETWEEN_MODE_TERMS, COORD_MODE_TERMS, INSTAGRAM_MODE_TERMS
 
 
 class SolverType(Enum):
     BETWEEN = 10
     TERZETTO = 20
     COORD = 30
+    INSTAGRAM = 40
     DEFAULT = 0
 
 
@@ -33,6 +34,9 @@ class Instance:
         solver = SolverType.COORD if any(
             term in question_lower.translate(str.maketrans('', '', string.punctuation)).split(' ') for term in
             COORD_MODE_TERMS) else solver
+        solver = SolverType.INSTAGRAM if any(
+            term in question_lower.translate(str.maketrans('', '', string.punctuation)).split(' ') for term in
+            INSTAGRAM_MODE_TERMS) else solver
 
         self.solver = solver
 

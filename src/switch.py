@@ -6,6 +6,7 @@ from src.instance import Instance, SolverType
 from src.solvers.between import Between
 from src.solvers.coord import Coord
 from src.solvers.default import Default
+from src.solvers.instagram import Instagram
 from src.solvers.terzetto import Terzetto
 
 
@@ -16,6 +17,7 @@ class Switch:
 
     def __post_init__(self):
         self.solvers = [
+            Instagram(self.pool, SolverType.INSTAGRAM),
             Coord(self.pool, SolverType.COORD),
             Terzetto(self.pool, SolverType.TERZETTO),
             Between(self.pool, SolverType.BETWEEN),

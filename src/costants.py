@@ -26,6 +26,8 @@ IT_STOP_WORDS = nltk.corpus.stopwords.words('italian') + ['dell', 'indica', 'ver
                                                           'queste', 'questo', 'questi', 'in', 'quale', 'quali', 'l',
                                                           '\'', '\"', '``', '\'', '`', 'fra', 'l\'', ' d ', 'd\'']
 
+INSTAGRAM_MODE_TERMS = ['instagram', 'ig']
+
 DOMAIN = "https://www.google.it/search?q="
 
 HEADERS = {
