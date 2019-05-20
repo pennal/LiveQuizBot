@@ -1,7 +1,7 @@
 import argparse
 import os
 from multiprocessing.pool import ThreadPool
-from shutil import copyfile, move
+from shutil import move
 
 from src.costants import SCREENSHOT, INPUT_SENTENCE
 from src.image_to_text import img_to_text
@@ -44,7 +44,7 @@ if __name__ == '__main__':
         if args.test:
             for index, file in enumerate(files('test')):
                 if file.split('.')[1] == 'jpg' or file.split('.')[1] == 'png':
-                    do_question(pool, file, debug=False)
+                    do_question(pool, file, debug=True)
                     key = input()
                     if key == 'y':
                         move(file, 'screenshot/' + file.split('/')[1])

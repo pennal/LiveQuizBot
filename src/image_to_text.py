@@ -17,6 +17,7 @@ SMALL_ANSWER_BOUNDARIES = lambda w, h: (60, 20, 0.2 * w, h - 30)
 
 def question_to_text(img: Image.Image, w: int, h: int, debug: bool) -> Tuple[str, int]:
     question_image = img.crop(QUESTION_BOUNDARIES(w, h))
+    if debug: question_image.show()
     question_text = pytesseract.image_to_string(question_image, lang='ita')
     n_of_lines = question_text.count('\n') + 1
     question_text = question_text.replace('\n', ' ')

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from bs4 import BeautifulSoup
 
-from src.costants import DOMAIN, COORD_MODE_TERMS
+from src.costants import DOMAIN
 from src.solvers.solver import Solver
 
 
