@@ -26,9 +26,6 @@ if __name__ == '__main__':
     sp = parser.add_mutually_exclusive_group()
     sp.add_argument('--live', help='Live game', action='store_true')
     sp.add_argument('--test', help='Test screens', action='store_true')
-    sp.add_argument('--dump', help='Dump screens', action='store_true')
-    sp.add_argument('--feature', help='Test single screen', action='store_true')
-    sp.add_argument('--test-id', help='Test single question', type=int)
     args = parser.parse_args()
 
     pool = ThreadPool(3)
@@ -44,8 +41,8 @@ if __name__ == '__main__':
                 if key == 'q':
                     pool.close()
                     pool.join()
-        if args.feature:
-            for index, file in enumerate(files('feature')):
+        if args.test:
+            for index, file in enumerate(files('test')):
                 if file.split('.')[1] == 'jpg' or file.split('.')[1] == 'png':
                     do_question(pool, file, debug=False)
                     key = input()

@@ -32,6 +32,7 @@ class Solver(ABC):
 
     def clean_impl(self, f):
         to_clean = self.copy.__dict__[f]
+        if len(to_clean.split(' ')) == 1: return
         word_tokenized_list = nltk.tokenize.word_tokenize(to_clean)
         word_tokenized_no_punct = [x.lower() for x in word_tokenized_list if x not in string.punctuation]
         word_tokenized_no_punct_no_sw = [x for x in word_tokenized_no_punct if
