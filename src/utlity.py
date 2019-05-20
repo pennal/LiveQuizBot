@@ -1,6 +1,8 @@
 import os
 import time
+
 import spacy
+
 nlp = spacy.load("it_core_news_sm")
 
 
@@ -32,3 +34,5 @@ def files(path):
 def ner_extractor(text):
     doc = nlp(text)
     return [(ent.text, ent.label_) for ent in doc.ents]
+
+

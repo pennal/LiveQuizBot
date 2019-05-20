@@ -1,9 +1,6 @@
 from dataclasses import dataclass
 
-from num2words import num2words
-
 from src.costants import DOMAIN
-from src.parallel_process import parallel_execution
 from src.solvers.solver import Solver
 
 
@@ -31,4 +28,3 @@ class SingleNer(Solver):
         else:
             total_points = {k: points[0].get(k, 0) + points[1].get(k, 0) for k in set(points[0]) | set(points[1])}
         return total_points
-

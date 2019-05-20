@@ -41,7 +41,8 @@ class Instance:
         self.is_first_complete_ner = len(self.ner_first_answer) > 0 and self.ner_first_answer[0][0] == self.first_answer
         self.ner_second_answer = ner_extractor(self.second_answer)
         print(self.ner_second_answer)
-        self.is_second_complete_ner = len(self.ner_second_answer) > 0 and self.ner_second_answer[0][0] == self.second_answer
+        self.is_second_complete_ner = len(self.ner_second_answer) > 0 and self.ner_second_answer[0][
+            0] == self.second_answer
         self.ner_third_answer = ner_extractor(self.third_answer)
         print(self.ner_third_answer)
         self.is_third_complete_ner = len(self.ner_third_answer) > 0 and self.ner_third_answer[0][0] == self.third_answer
@@ -56,7 +57,8 @@ class Instance:
         solver = SolverType.INSTAGRAM if any(
             term in question_lower.translate(str.maketrans('', '', string.punctuation)).split(' ') for term in
             INSTAGRAM_MODE_TERMS) else solver
-        solver = SolverType.SINGLE_NER if question_lower.count("\"") == 2 and len(self.ner_question) == 1 and self.ner_question[0][0].lower() != question_lower.split('"')[1] else solver
+        solver = SolverType.SINGLE_NER if question_lower.count("\"") == 2 and len(self.ner_question) == 1 and \
+                                          self.ner_question[0][0].lower() != question_lower.split('"')[1] else solver
 
         print(solver)
 

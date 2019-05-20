@@ -33,7 +33,9 @@ class Solver(ABC):
     def clean_impl(self, f):
         to_clean = self.copy.__dict__[f]
         if len(to_clean.split(' ')) == 1: return
-        if (f == 'first_answer' and self.copy.is_first_complete_ner) or (f == 'second_answer' and self.copy.is_second_complete_ner) or (f == 'third_answer' and self.copy.is_third_complete_ner):
+        if (f == 'first_answer' and self.copy.is_first_complete_ner) or (
+                f == 'second_answer' and self.copy.is_second_complete_ner) or (
+                f == 'third_answer' and self.copy.is_third_complete_ner):
             to_clean = to_clean.lower().replace('ii ', '')
             self.copy.__dict__[f] = to_clean
             return
@@ -43,7 +45,7 @@ class Solver(ABC):
                                          x not in set(IT_STOP_WORDS)]
         word_tokenized_no_punct_no_sw_no_apostrophe = [x.split("'") for x in word_tokenized_no_punct_no_sw]
         word_tokenized_no_punct_no_sw_no_apostrophe = [y for x in word_tokenized_no_punct_no_sw_no_apostrophe for y in
-                                                            x]
+                                                       x]
 
         self.copy.__dict__[f] = ' '.join(unidecode(' '.join(word_tokenized_no_punct_no_sw_no_apostrophe)).split())
 
@@ -98,13 +100,15 @@ class Solver(ABC):
             count_title = 0
             count_description = 0
 
-            if (index == 0 and self.copy.is_first_complete_ner) or (index == 1 and self.copy.is_second_complete_ner) or (index == 2 and self.copy.is_third_complete_ner):
+            if (index == 0 and self.copy.is_first_complete_ner) or (
+                    index == 1 and self.copy.is_second_complete_ner) or (
+                    index == 2 and self.copy.is_third_complete_ner):
                 count_title += sum(1 for _ in self.find_occurences(title, answer))
                 if count_title == 0: count_title += 1 if any(
-                        ' ' + term + ' ' in title for term in answer.split(' ')) else 0
+                    ' ' + term + ' ' in title for term in answer.split(' ')) else 0
                 count_description += sum(1 for _ in self.find_occurences(description, answer))
                 if count_description == 0: count_description += 1 if any(
-                        term in description for term in answer.split(' ')) else 0
+                    term in description for term in answer.split(' ')) else 0
                 data[1][answer] += count_title + count_description
             else:
                 for word in answer.split(' '):
@@ -136,11 +140,13 @@ class Solver(ABC):
             print('{}3: {}{} - score: {}'.format(Colors.BOLD, res[2][0].upper(), Colors.END, res[2][1]))
         elif res[0][1] == res[1][1]:
             if len(res[0][0]) < len(res[1][0]):
-                print('{}1: {}{} - score: {}'.format(Colors.BOLD + Colors.RED, res[0][0].upper(), Colors.END, res[0][1]))
+                print(
+                    '{}1: {}{} - score: {}'.format(Colors.BOLD + Colors.RED, res[0][0].upper(), Colors.END, res[0][1]))
                 print('{}2: {}{} - score: {}'.format(Colors.BOLD, res[1][0].upper(), Colors.END, 0))
                 print('{}3: {}{} - score: {}'.format(Colors.BOLD, res[2][0].upper(), Colors.END, res[2][1]))
             else:
-                print('{}1: {}{} - score: {}'.format(Colors.BOLD + Colors.RED, res[1][0].upper(), Colors.END, res[1][1]))
+                print(
+                    '{}1: {}{} - score: {}'.format(Colors.BOLD + Colors.RED, res[1][0].upper(), Colors.END, res[1][1]))
                 print('{}2: {}{} - score: {}'.format(Colors.BOLD, res[0][0].upper(), Colors.END, 0))
                 print('{}3: {}{} - score: {}'.format(Colors.BOLD, res[2][0].upper(), Colors.END, res[2][1]))
         else:
