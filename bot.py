@@ -15,6 +15,7 @@ def do_screenshot():
 @timeit
 def do_question(pool: ThreadPool, file: str = SCREENSHOT, debug: bool = False):
     instance = img_to_text(file, pool, debug)
+    print(instance.question)
     switch = Switch(pool)
     switch.run(instance)
 

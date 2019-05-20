@@ -77,9 +77,9 @@ class Solver(ABC):
 
         # TODO: better parallelize
         args = [[link, deepcopy(points)] for link in all_links]
-        res = ThreadPool(3).map(self.get_points_link, args)
-        res = list(filter(lambda x: x is not None, res))
+        res = ThreadPool(6).map(self.get_points_link, args)
         res = ({k: sum([x[k] for x in res if k in x]) for i in res for k, v in i.items()})
+
         return res
 
     def get_points_link(self, data):
@@ -87,7 +87,7 @@ class Solver(ABC):
             title = data[0].find('div', {'class': 'r'}).find('h3').text.lower()
             description = data[0].find('div', {'class': 's'}).find('span', {'class': 'st'}).text.lower()
         except Exception as e:
-            return None
+            return data[1]
 
         for answer in data[1].keys():
             count_title = 0
@@ -110,14 +110,29 @@ class Solver(ABC):
 
     # TODO: map cleaned answers to originals answers
     def print_results(self, point):
+        scores = sorted(point.values())
         if self.copy.is_negative:
             res = list(sorted(point.items(), key=operator.itemgetter(1)))
         else:
             res = list(reversed(sorted(point.items(), key=operator.itemgetter(1))))
 
-        print('{}1: {}{} - score: {}'.format(Colors.BOLD + Colors.RED, res[0][0].upper(), Colors.END, res[0][1]))
-        print('{}2: {}{} - score: {}'.format(Colors.BOLD, res[1][0].upper(), Colors.END, res[1][1]))
-        print('{}3: {}{} - score: {}'.format(Colors.BOLD, res[2][0].upper(), Colors.END, res[2][1]))
+        if all(score == 0 for score in scores):
+            print('{}1: {}{} - score: {}'.format(Colors.BOLD, res[0][0].upper(), Colors.END, res[0][1]))
+            print('{}2: {}{} - score: {}'.format(Colors.BOLD, res[1][0].upper(), Colors.END, res[1][1]))
+            print('{}3: {}{} - score: {}'.format(Colors.BOLD, res[2][0].upper(), Colors.END, res[2][1]))
+        elif res[0][1] == res[1][1]:
+            if len(res[0][0]) < len(res[1][0]):
+                print('{}1: {}{} - score: {}'.format(Colors.BOLD + Colors.RED, res[0][0].upper(), Colors.END, res[0][1]))
+                print('{}2: {}{} - score: {}'.format(Colors.BOLD, res[1][0].upper(), Colors.END, 0))
+                print('{}3: {}{} - score: {}'.format(Colors.BOLD, res[2][0].upper(), Colors.END, res[2][1]))
+            else:
+                print('{}1: {}{} - score: {}'.format(Colors.BOLD + Colors.RED, res[1][0].upper(), Colors.END, res[1][1]))
+                print('{}2: {}{} - score: {}'.format(Colors.BOLD, res[0][0].upper(), Colors.END, 0))
+                print('{}3: {}{} - score: {}'.format(Colors.BOLD, res[2][0].upper(), Colors.END, res[2][1]))
+        else:
+            print('{}1: {}{} - score: {}'.format(Colors.BOLD + Colors.RED, res[0][0].upper(), Colors.END, res[0][1]))
+            print('{}2: {}{} - score: {}'.format(Colors.BOLD, res[1][0].upper(), Colors.END, res[1][1]))
+            print('{}3: {}{} - score: {}'.format(Colors.BOLD, res[2][0].upper(), Colors.END, res[2][1]))
 
     def count_points(self, queries):
         res = parallel_execution(self.pool, self.get_page, queries)
