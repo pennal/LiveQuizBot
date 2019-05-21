@@ -29,4 +29,5 @@ class SingleNer(Solver):
             total_points = points[1]
         else:
             total_points = {k: points[0].get(k, 0) + points[1].get(k, 0) for k in set(points[0]) | set(points[1])}
+            total_points = {k: total_points.get(k, 0) + points[2].get(k, 0) for k in set(total_points) | set(points[2])}
         return total_points

@@ -56,7 +56,8 @@ class Instance:
             term in question_lower.translate(str.maketrans('', '', string.punctuation)).split(' ') for term in
             INSTAGRAM_MODE_TERMS) else solver
         solver = SolverType.SINGLE_NER if question_lower.count("\"") == 2 and len(self.ner_question) == 1 and \
-                                          self.ner_question[0][0].lower() != question_lower.split('"')[1] else solver
+                                          self.ner_question[0][0].lower() not in question_lower.split('"')[
+                                              1] else solver
 
         self.solver = solver
 

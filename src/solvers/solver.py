@@ -139,7 +139,7 @@ class Solver(ABC):
             print('{}1: {}{} - score: {}'.format(Colors.BOLD, res[0][0].upper(), Colors.END, res[0][1]))
             print('{}2: {}{} - score: {}'.format(Colors.BOLD, res[1][0].upper(), Colors.END, res[1][1]))
             print('{}3: {}{} - score: {}'.format(Colors.BOLD, res[2][0].upper(), Colors.END, res[2][1]))
-        elif res[0][1] == res[1][1]:
+        elif res[0][1] == res[1][1] and len(res[0][0].split(' ')) > 1 and len(res[1][0].split(' ')) > 1:
             if len(res[0][0]) < len(res[1][0]):
                 print(
                     '{}1: {}{} - score: {}'.format(Colors.BOLD + Colors.RED, res[0][0].upper(), Colors.END, res[0][1]))
