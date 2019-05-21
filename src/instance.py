@@ -29,6 +29,7 @@ class Instance:
     ner_first_answer: List = field(default_factory=lambda: [])
     ner_second_answer: List = field(default_factory=lambda: [])
     ner_third_answer: List = field(default_factory=lambda: [])
+    is_both: bool = field(init=False)
 
     def __post_init__(self):
         question_lower = self.to_lower('question')
@@ -37,14 +38,11 @@ class Instance:
         self.ner_question = ner_extractor(self.question)
 
         self.ner_first_answer = ner_extractor(self.first_answer)
-        print(self.ner_first_answer)
         self.is_first_complete_ner = len(self.ner_first_answer) > 0 and self.ner_first_answer[0][0] == self.first_answer
         self.ner_second_answer = ner_extractor(self.second_answer)
-        print(self.ner_second_answer)
         self.is_second_complete_ner = len(self.ner_second_answer) > 0 and self.ner_second_answer[0][
             0] == self.second_answer
         self.ner_third_answer = ner_extractor(self.third_answer)
-        print(self.ner_third_answer)
         self.is_third_complete_ner = len(self.ner_third_answer) > 0 and self.ner_third_answer[0][0] == self.third_answer
 
         # solver type are ordered from less to more important
@@ -58,18 +56,20 @@ class Instance:
             term in question_lower.translate(str.maketrans('', '', string.punctuation)).split(' ') for term in
             INSTAGRAM_MODE_TERMS) else solver
         solver = SolverType.SINGLE_NER if question_lower.count("\"") == 2 and len(self.ner_question) == 1 and \
-                                          self.ner_question[0][0].lower() != question_lower.split('"')[1] else solver
-
-        print(solver)
+                                          self.ner_question[0][0].lower() not in question_lower.split('"')[
+                                              1] else solver
 
         self.solver = solver
 
-    def to_lower(self, f):
+    def to_lower(self, f: str):
         return self.__dict__[f].lower()
 
     @staticmethod
-    def create_instance(question, first_answer, second_answer, third_answer):
+    def create_instance(question: str, first_answer: str, second_answer: str, third_answer: str):
         return Instance(question, first_answer, second_answer, third_answer)
+
+    def print_question(self):
+        print(self.question)
 
     def __str__(self):
         return '{}, {}, {}, {}'.format(self.question, self.first_answer, self.second_answer, self.third_answer)

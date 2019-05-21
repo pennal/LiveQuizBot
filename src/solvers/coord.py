@@ -3,13 +3,14 @@ from dataclasses import dataclass
 from bs4 import BeautifulSoup
 
 from src.costants import DOMAIN, COORD_MODE_TERMS
+from src.instance import Instance
 from src.solvers.solver import Solver
 
 
 @dataclass
 class Coord(Solver):
 
-    def is_valid_type(self, instance):
+    def is_valid_type(self, instance: Instance):
         return self.type == instance.solver
 
     def craft_queries(self):
@@ -24,7 +25,7 @@ class Coord(Solver):
                     DOMAIN + self.copy.third_answer + ' city coordinates'
                     ]
 
-    def get_points_from_texts(self, html):
+    def get_points_from_texts(self, html: str):
         soup = BeautifulSoup(html, features="html.parser")
         return soup.find('div', {'class', 'Z0LcW'}).text.strip()
 

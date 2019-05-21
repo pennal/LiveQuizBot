@@ -23,7 +23,7 @@ def timeit(method):
     return timed
 
 
-def files(path):
+def files(path: str):
     files = []
     for r, d, f in os.walk(path):
         for file in f:
@@ -31,7 +31,7 @@ def files(path):
     return files
 
 
-def ner_extractor(text):
+def ner_extractor(text: str):
     doc = nlp(text)
     return [(ent.text, ent.label_) for ent in doc.ents]
 
