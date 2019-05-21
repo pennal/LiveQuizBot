@@ -23,7 +23,9 @@ class Instagram(Solver):
     def get_points_from_texts(self, html: str):
         soup = BeautifulSoup(html, features="html.parser")
         link = soup.find('div', {'class': 'g'}).find('span', {'class': 'st'}).text
-        return int(link.split('Followers')[0].replace('m', '000000').replace('.', '').replace('k', '000').strip())
+        n_of_zero = '000' if 'k' in link.split('Followers')[0] else '000000'
+        number = link.split('Followers')[0].split('.')[0].replace('k', '').replace('m', '').strip()
+        return int(number + n_of_zero)
 
     def select_points(self, followers: Dict):
         return {

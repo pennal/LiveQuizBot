@@ -64,7 +64,13 @@ class Solver(ABC):
         self.copy = deepcopy(instance)
 
     def craft_queries(self):
-        return [DOMAIN + self.copy.question]
+
+        return [
+            DOMAIN + self.copy.question,
+            DOMAIN + self.copy.question + ' AND ' + self.copy.first_answer,
+            DOMAIN + self.copy.question + ' AND ' + self.copy.second_answer,
+            DOMAIN + self.copy.question + ' AND ' + self.copy.third_answer
+        ]
 
     def get_page(self, url: str):
         return req().get(url, headers=HEADERS).text
@@ -104,6 +110,7 @@ class Solver(ABC):
             if (index == 0 and self.copy.is_first_complete_ner) or (
                     index == 1 and self.copy.is_second_complete_ner) or (
                     index == 2 and self.copy.is_third_complete_ner):
+
                 count_title += sum(1 for _ in self.find_occurences(title, answer))
                 if count_title == 0: count_title += 1 if any(
                     ' ' + term + ' ' in title for term in answer.split(' ')) else 0
@@ -120,12 +127,18 @@ class Solver(ABC):
                             int_to_word = num2words(int(word), lang='it')
                             count_title += sum(1 for _ in self.find_occurences(title, int_to_word))
                             count_description += sum(1 for _ in self.find_occurences(description, int_to_word))
-
                 data[1][answer] += count_title + count_description
         return data[1]
 
     def select_points(self, points: List[Dict[str, int]]):
-        return points[0]
+        if sum(points[0].values()) != 0:
+            return points[0]
+        else:
+            total_points = {k: points[0].get(k, 0) + points[1].get(k, 0) for k in set(points[0]) | set(points[1])}
+            total_points = {k: total_points.get(k, 0) + points[2].get(k, 0) for k in set(total_points) | set(points[2])}
+            total_points = {k: total_points.get(k, 0) + points[3].get(k, 0) for k in set(total_points) | set(points[3])}
+        return total_points
+        # return points[0]
 
     # TODO: map cleaned answers to originals answers
     def print_results(self, point: Dict[str, int]):
@@ -139,7 +152,7 @@ class Solver(ABC):
             print('{}1: {}{} - score: {}'.format(Colors.BOLD, res[0][0].upper(), Colors.END, res[0][1]))
             print('{}2: {}{} - score: {}'.format(Colors.BOLD, res[1][0].upper(), Colors.END, res[1][1]))
             print('{}3: {}{} - score: {}'.format(Colors.BOLD, res[2][0].upper(), Colors.END, res[2][1]))
-        elif res[0][1] == res[1][1]:
+        elif res[0][1] == res[1][1] and len(res[0][0].split(' ')) > 1 and len(res[1][0].split(' ')) > 1:
             if len(res[0][0]) < len(res[1][0]):
                 print(
                     '{}1: {}{} - score: {}'.format(Colors.BOLD + Colors.RED, res[0][0].upper(), Colors.END, res[0][1]))

@@ -47,7 +47,7 @@ if __name__ == '__main__':
                     pool.join()
         elif args.test:
             for index, file in enumerate(files('test')):
-                if file.split('.')[1] == 'jpg' or file.split('.')[1] == 'png':
+                if (file.split('.')[1] == 'jpg' or file.split('.')[1] == 'png'):
                     do_question(pool, file, debug=False)
                     key = input()
                     if key == 'y':
