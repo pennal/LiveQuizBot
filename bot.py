@@ -58,7 +58,7 @@ if __name__ == '__main__':
             if exists:
                 with open('dump.txt') as json_file:
                     data = json.load(json_file, strict=False)
-                    for index, file in enumerate(files('stage')):
+                    for index, file in enumerate(files('screenshot')):
                         if file.split('.')[1] == 'jpg' or file.split('.')[1] == 'png':
                             instance = img_to_text(file, pool, debug=False)
                             questions.append({
