@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from copy import deepcopy
 from dataclasses import dataclass, field
 from multiprocessing.pool import ThreadPool
-from typing import List
+from typing import List, Dict
 
 import nltk
 from bs4 import BeautifulSoup
@@ -27,10 +27,10 @@ class Solver(ABC):
     fields: List = field(default_factory=lambda: ['question', 'first_answer', 'second_answer', 'third_answer'])
 
     @abstractmethod
-    def is_valid_type(self, instance):
+    def is_valid_type(self, instance: Instance):
         raise Exception("Not implemented")
 
-    def clean_impl(self, f):
+    def clean_impl(self, f: str):
         to_clean = self.copy.__dict__[f]
         if len(to_clean.split(' ')) == 1: return
         if (f == 'first_answer' and self.copy.is_first_complete_ner) or (
@@ -59,21 +59,21 @@ class Solver(ABC):
         if not self.copy.question: self.copy.question = self.original.to_lower('question')
         parallel_execution(self.pool, self.clean_impl, self.fields)
 
-    def _init(self, instance):
+    def _init(self, instance: Instance):
         self.original = instance
         self.copy = deepcopy(instance)
 
     def craft_queries(self):
         return [DOMAIN + self.copy.question]
 
-    def get_page(self, url):
+    def get_page(self, url: str):
         return req().get(url, headers=HEADERS).text
 
     @staticmethod
-    def find_occurences(to_search, to_find):
+    def find_occurences(to_search: str, to_find: str):
         return re.finditer(r'\b%s\b' % re.escape(to_find), to_search)
 
-    def get_points_from_texts(self, html):
+    def get_points_from_texts(self, html: str):
         soup = BeautifulSoup(html, features="html.parser")
         all_links = soup.find_all('div', {'class': 'g'})
 
@@ -90,7 +90,7 @@ class Solver(ABC):
 
         return res
 
-    def get_points_link(self, data):
+    def get_points_link(self, data: List):
         try:
             title = data[0].find('div', {'class': 'r'}).find('h3').text.lower()
             description = data[0].find('div', {'class': 's'}).find('span', {'class': 'st'}).text.lower()
@@ -124,11 +124,11 @@ class Solver(ABC):
                 data[1][answer] += count_title + count_description
         return data[1]
 
-    def select_points(self, points):
+    def select_points(self, points: List[Dict[str, int]]):
         return points[0]
 
     # TODO: map cleaned answers to originals answers
-    def print_results(self, point):
+    def print_results(self, point: Dict[str, int]):
         scores = sorted(point.values())
         if self.copy.is_negative:
             res = list(sorted(point.items(), key=operator.itemgetter(1)))
@@ -155,13 +155,13 @@ class Solver(ABC):
             print('{}2: {}{} - score: {}'.format(Colors.BOLD, res[1][0].upper(), Colors.END, res[1][1]))
             print('{}3: {}{} - score: {}'.format(Colors.BOLD, res[2][0].upper(), Colors.END, res[2][1]))
 
-    def count_points(self, queries):
+    def count_points(self, queries: List[str]):
         res = parallel_execution(self.pool, self.get_page, queries)
         points = parallel_execution(self.pool, self.get_points_from_texts, res)
         point = self.select_points(points)
         self.print_results(point)
 
-    def solve(self, instance):
+    def solve(self, instance: Instance):
         self._init(instance)
         self.clean()
         queries = self.craft_queries()

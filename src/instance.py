@@ -60,12 +60,15 @@ class Instance:
 
         self.solver = solver
 
-    def to_lower(self, f):
+    def to_lower(self, f: str):
         return self.__dict__[f].lower()
 
     @staticmethod
-    def create_instance(question, first_answer, second_answer, third_answer):
+    def create_instance(question: str, first_answer: str, second_answer: str, third_answer: str):
         return Instance(question, first_answer, second_answer, third_answer)
+
+    def print_question(self):
+        print(self.question)
 
     def __str__(self):
         return '{}, {}, {}, {}'.format(self.question, self.first_answer, self.second_answer, self.third_answer)

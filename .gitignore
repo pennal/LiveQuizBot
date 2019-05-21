@@ -236,10 +236,9 @@ dmypy.json
 pyvenv.cfg
 pip-selfcheck.json
 
-dump.txt
-screenshot.png
-
 # End of https://www.gitignore.io/api/git,venv,python,pycharm
 
 .DS_Store
 dump.txt
+dump_patty.txt
+screenshot.png

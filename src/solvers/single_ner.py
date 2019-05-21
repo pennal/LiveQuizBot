@@ -1,13 +1,15 @@
 from dataclasses import dataclass
+from typing import Dict, List
 
 from src.costants import DOMAIN
+from src.instance import Instance
 from src.solvers.solver import Solver
 
 
 @dataclass
 class SingleNer(Solver):
 
-    def is_valid_type(self, instance):
+    def is_valid_type(self, instance: Instance):
         return self.type == instance.solver
 
     def clean(self):
@@ -20,7 +22,7 @@ class SingleNer(Solver):
                 DOMAIN + subject + ' "' + self.copy.ner_question[0][0] + '" AND ' + self.copy.third_answer
                 ]
 
-    def select_points(self, points):
+    def select_points(self, points: List[Dict[str, int]]):
         if list(points[0].values()).count(0) == 2 and not self.copy.is_negative and sum(points[0].values()) > 1:
             total_points = points[0]
         elif list(points[1].values()).count(0) == 2 and self.copy.is_negative and sum(points[1].values()) > 1:

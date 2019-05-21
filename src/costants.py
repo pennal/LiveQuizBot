@@ -10,8 +10,8 @@ class Colors:
     END = '\033[0m'
 
 
-INPUT_SENTENCE = "Press " + Colors.BOLD + Colors.GREEN + "ENTER" + Colors.END + " to take a screenshot" + \
-                 " of the question or press " + Colors.BOLD + Colors.RED + "q" + Colors.END + " to quit: "
+INPUT_SENTENCE = "Press {}{}ENTER{} to take a screenshot of the question or {}{}q{} to qui:".format(
+    Colors.BOLD,Colors.GREEN, Colors.END, Colors.BOLD, Colors.RED, Colors.END)
 
 SCREENSHOT = 'screenshot.png'
 

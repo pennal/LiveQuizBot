@@ -8,13 +8,11 @@ Use at your own risk.
 * Connect your phone to the pc (transfer mode)
 * Run ``install.sh``
 * Run ``python3 bot.py --live``
-* Follow instruction on the screen
+* Follow instructions on the screen
 
 # Disclaimer
-This project have been exclusively made for educational purposes. Works with Andriod phone with 
-resolution of 1920x1080, osx operating system and python > 3.7.
+This project have been exclusively made for educational purposes. Works with Andriod phones with 
+resolution of 1920x1080, osx operating systems and python > 3.7.
 
 # License
 Distributed under the MIT license.
-
-
