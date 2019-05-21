@@ -6,6 +6,7 @@ from shutil import move
 
 from src.costants import SCREENSHOT, INPUT_SENTENCE
 from src.image_to_text import img_to_text
+from src.instance import Instance
 from src.switch import Switch
 from src.utlity import files, timeit
 
@@ -28,6 +29,7 @@ if __name__ == '__main__':
     sp.add_argument('--live', help='Live game', action='store_true')
     sp.add_argument('--test', help='Test screens', action='store_true')
     sp.add_argument('--dump', help='Dump questions', action='store_true')
+    sp.add_argument('--test-dump', help='Test dump', action='store_true')
     args = parser.parse_args()
 
     pool = ThreadPool(3)
@@ -80,6 +82,15 @@ if __name__ == '__main__':
                 d = json.dumps(questions)
                 with open('dump.txt', 'w') as the_file:
                     the_file.write(d)
+        elif args.test_dump:
+            with open('dump_patty.txt') as json_file:
+                data = json.load(json_file, strict=False)
+                for question in data:
+                    instance = Instance.create_instance(question['question'], question['answers'][0]['first_answer'], question['answers'][1]['second_answer'], question['answers'][2]['third_answer'])
+                    print(instance.question)
+                    switch = Switch(pool)
+                    switch.run(instance)
+                    key = input()
     except KeyboardInterrupt as _:
         pool.close()
         pool.join()

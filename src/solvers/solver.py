@@ -37,6 +37,7 @@ class Solver(ABC):
                 f == 'second_answer' and self.copy.is_second_complete_ner) or (
                 f == 'third_answer' and self.copy.is_third_complete_ner):
             to_clean = to_clean.lower().replace('ii ', '')
+            to_clean = to_clean.translate(str.maketrans('', '', string.punctuation))
             self.copy.__dict__[f] = to_clean
             return
         word_tokenized_list = nltk.tokenize.word_tokenize(to_clean)
