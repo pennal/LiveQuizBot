@@ -11,7 +11,8 @@ Use at your own risk.
 * Follow instruction on the screen
 
 # Disclaimer
-This project have been exclusively made for educational purposes.
+This project have been exclusively made for educational purposes. Works with Andriod phone with 
+resolution of 1920x1080, osx operating system and python > 3.7.
 
 # License
 Distributed under the MIT license.
