@@ -32,10 +32,7 @@ def files(path: str):
 
 def ner_extractor(text: str):
     doc = nlp(text)
-    print([(ent.text, ent.label_) for ent in doc.ents])
     return [(ent.text, ent.label_) for ent in doc.ents]
-
-# print(ner_extractor('Città del Messico'))
 
 
 
