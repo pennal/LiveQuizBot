@@ -62,7 +62,6 @@ if __name__ == '__main__':
                     switch = Switch(pool)
                     for index, file in enumerate(files('screenshot')):
                         if file.split('.')[1] == 'jpg' or file.split('.')[1] == 'png':
-                            print(file)
                             instance = img_to_text(file, pool, debug=False)
                             point = switch.run(instance)
                             questions.append({
@@ -87,14 +86,14 @@ if __name__ == '__main__':
                                         'correct': False,
                                         'bot': list(point.keys()).index(instance.third_answer) == 0 and point[instance.third_answer] != 0,
                                         'points': point[instance.third_answer]
-                                    }
+                                    },
                                 ],
                             })
                 d = json.dumps(questions)
                 with open('dump.txt', 'w') as the_file:
                     the_file.write(d)
         elif args.test_dump:
-            with open('dump_patty.txt') as json_file:
+            with open('dump.txt') as json_file:
                 data = json.load(json_file, strict=False)
                 switch = Switch(pool)
                 for question in data:

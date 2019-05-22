@@ -115,11 +115,10 @@ class Solver(ABC):
                     index == 1 and self.copy.is_second_complete_ner) or (
                     index == 2 and self.copy.is_third_complete_ner):
                 count_title += sum(1 for _ in self.find_occurences(title, answer))
-                if count_title == 0: count_title += 1 if any(
-                    ' ' + term + ' ' in title for term in answer.split(' ')) else 0
+                if count_title == 0: count_title += 1 if ' ' + answer + ' ' in title else 0
                 count_description += sum(1 for _ in self.find_occurences(description, answer))
-                if count_description == 0: count_description += 1 if any(
-                    term in description for term in answer.split(' ')) else 0
+                if count_description == 0: count_description += 1 if ' ' + answer + '' in description else 0
+
                 data[1][answer] += count_title + count_description
             else:
                 for word in answer.split(' '):
