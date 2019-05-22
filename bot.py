@@ -3,8 +3,9 @@ import json
 import os
 from multiprocessing.pool import ThreadPool
 from shutil import move
+import datetime
 
-from src.costants import SCREENSHOT, INPUT_SENTENCE
+from src.costants import BASE_SCREENSHOT_FOLDER, INPUT_SENTENCE
 from src.image_to_text import img_to_text
 from src.instance import Instance
 from src.switch import Switch
@@ -12,11 +13,30 @@ from src.utlity import files, timeit
 
 
 def do_screenshot():
-    return os.system("adb exec-out screencap -p > " + SCREENSHOT)
+    # Generate the name for today's folder, and the path
+    day_folder_name = datetime.date.today().strftime("%d_%m_%Y")
+    day_folder_path = os.path.join(BASE_SCREENSHOT_FOLDER, day_folder_name)
+
+    # Create the folder does not yet exist
+    if not os.path.exists(day_folder_path):
+        os.makedirs(day_folder_path)
+
+    # Generate the name for the current file
+    # Get the current hour. This way we can distinguish between morning and evening games
+    current_hour = datetime.date.today().strftime("%H")
+
+    # Get all the existing screens, so we append the correct number
+    existing_files = os.listdir(day_folder_path)
+
+    # Generate the final path
+    full_filename = "{}__{}__{}.png".format(day_folder_name, current_hour, len(existing_files))
+    current_screen_path = os.path.join(day_folder_path, full_filename)
+
+    return os.system("adb exec-out screencap -p > " + current_screen_path), current_screen_path
 
 
 @timeit
-def do_question(pool: ThreadPool, file: str = SCREENSHOT, debug: bool = False):
+def do_question(pool: ThreadPool, file: str, debug: bool = False):
     instance = img_to_text(file, pool, debug)
     instance.print_question()
     switch = Switch(pool)
@@ -40,9 +60,9 @@ if __name__ == '__main__':
             while True:
                 key = input(INPUT_SENTENCE)
                 if not key:
-                    screen = do_screenshot()
+                    screen, filename = do_screenshot()
                     if screen == 0:
-                        do_question(pool)
+                        do_question(pool, filename)
                 if key == 'q':
                     pool.close()
                     pool.join()

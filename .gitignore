@@ -242,3 +242,5 @@ pip-selfcheck.json
 dump.txt
 dump_patty.txt
 screenshot.png
+live_screens/**
+.idea/inspectionProfiles
