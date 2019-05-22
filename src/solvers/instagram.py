@@ -29,7 +29,7 @@ class Instagram(Solver):
 
     def select_points(self, followers: Dict):
         return {
-            self.original.first_answer: followers[0],
-            self.original.second_answer: followers[1],
-            self.original.third_answer: followers[2]
+            self.copy.first_answer: followers[0],
+            self.copy.second_answer: followers[1],
+            self.copy.third_answer: followers[2]
         }

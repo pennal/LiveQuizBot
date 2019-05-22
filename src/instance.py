@@ -1,7 +1,7 @@
 import string
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List
+from typing import List, Dict
 
 from src.costants import BETWEEN_MODE_TERMS, COORD_MODE_TERMS, INSTAGRAM_MODE_TERMS
 from src.utlity import ner_extractor
@@ -30,6 +30,7 @@ class Instance:
     ner_second_answer: List = field(default_factory=lambda: [])
     ner_third_answer: List = field(default_factory=lambda: [])
     is_both: bool = field(init=False)
+    indexes: Dict = field(default_factory=lambda: {})
 
     def __post_init__(self):
         question_lower = self.to_lower('question')

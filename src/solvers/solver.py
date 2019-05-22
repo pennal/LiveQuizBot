@@ -32,23 +32,33 @@ class Solver(ABC):
 
     def clean_impl(self, f: str):
         to_clean = self.copy.__dict__[f]
-        if len(to_clean.split(' ')) == 1: return
-        if (f == 'first_answer' and self.copy.is_first_complete_ner) or (
+        if len(to_clean.split(' ')) == 1:
+            to_clean = to_clean.lower().replace('ii ', '')
+            to_clean = to_clean.translate(str.maketrans('', '', string.punctuation))
+            self.copy.__dict__[f] = to_clean
+        elif (f == 'first_answer' and self.copy.is_first_complete_ner) or (
                 f == 'second_answer' and self.copy.is_second_complete_ner) or (
                 f == 'third_answer' and self.copy.is_third_complete_ner):
             to_clean = to_clean.lower().replace('ii ', '')
             to_clean = to_clean.translate(str.maketrans('', '', string.punctuation))
             self.copy.__dict__[f] = to_clean
-            return
-        word_tokenized_list = nltk.tokenize.word_tokenize(to_clean)
-        word_tokenized_no_punct = [x.lower() for x in word_tokenized_list if x not in string.punctuation]
-        word_tokenized_no_punct_no_sw = [x for x in word_tokenized_no_punct if
-                                         x not in set(IT_STOP_WORDS)]
-        word_tokenized_no_punct_no_sw_no_apostrophe = [x.split("'") for x in word_tokenized_no_punct_no_sw]
-        word_tokenized_no_punct_no_sw_no_apostrophe = [y for x in word_tokenized_no_punct_no_sw_no_apostrophe for y in
-                                                       x]
+        else:
+            word_tokenized_list = nltk.tokenize.word_tokenize(to_clean)
+            word_tokenized_no_punct = [x.lower() for x in word_tokenized_list if x not in string.punctuation]
+            word_tokenized_no_punct_no_sw = [x for x in word_tokenized_no_punct if
+                                             x not in set(IT_STOP_WORDS)]
+            word_tokenized_no_punct_no_sw_no_apostrophe = [x.split("'") for x in word_tokenized_no_punct_no_sw]
+            word_tokenized_no_punct_no_sw_no_apostrophe = [y for x in word_tokenized_no_punct_no_sw_no_apostrophe for y in
+                                                           x]
 
-        self.copy.__dict__[f] = ' '.join(unidecode(' '.join(word_tokenized_no_punct_no_sw_no_apostrophe)).split())
+            self.copy.__dict__[f] = ' '.join(unidecode(' '.join(word_tokenized_no_punct_no_sw_no_apostrophe)).split())
+
+        if f == self.fields[1]:
+            self.copy.indexes[self.copy.__dict__[f]] = 0
+        elif f == self.fields[2]:
+            self.copy.indexes[self.copy.__dict__[f]] = 1
+        elif f == self.fields[3]:
+            self.copy.indexes[self.copy.__dict__[f]] = 2
 
     def clean(self):
         question = self.copy.to_lower('question').split(', ')
@@ -127,42 +137,57 @@ class Solver(ABC):
     def select_points(self, points: List[Dict[str, int]]):
         return points[0]
 
-    # TODO: map cleaned answers to originals answers
+    def _print_score(self, n, res, index, win=False):
+        print('{}{}: {}{} - score: {}'.format(Colors.BOLD if not win else Colors.BOLD + Colors.RED, n, res[index][0].upper(), Colors.END, res[index][1]))
+
     def print_results(self, point: Dict[str, int]):
         scores = sorted(point.values())
+
+        tmp_res = list(point.items())
+
+        # hacky but needed if score of first two equal but one of the two has more words
+        if tmp_res[0][1] == tmp_res[1][1] and len(tmp_res[0][0].split(' ')) > 1 and len(tmp_res[1][0].split(' ')) > 1:
+            if len(tmp_res[0][0]) < len(tmp_res[1][0]):
+                point[tmp_res[1][0]] = 0
+            else:
+                point[tmp_res[0][0]] = 0
+
+        res = [None, None, None]
+        tmp_res = list(point.items())
+
+        for i in range(len(tmp_res)):
+            org_answer_index = self.copy.indexes[tmp_res[i][0]]
+            if org_answer_index == 0:
+                res[0] = (self.original.first_answer, tmp_res[i][1])
+            elif org_answer_index == 1:
+                res[1] = (self.original.second_answer, tmp_res[i][1])
+            else:
+                res[2] = (self.original.third_answer, tmp_res[i][1])
+
         if self.copy.is_negative:
-            res = list(sorted(point.items(), key=operator.itemgetter(1)))
+            res = list(sorted(res, key=operator.itemgetter(1)))
         else:
-            res = list(reversed(sorted(point.items(), key=operator.itemgetter(1))))
+            res = list(reversed(sorted(res, key=operator.itemgetter(1))))
 
         if all(score == 0 for score in scores):
-            print('{}1: {}{} - score: {}'.format(Colors.BOLD, res[0][0].upper(), Colors.END, res[0][1]))
-            print('{}2: {}{} - score: {}'.format(Colors.BOLD, res[1][0].upper(), Colors.END, res[1][1]))
-            print('{}3: {}{} - score: {}'.format(Colors.BOLD, res[2][0].upper(), Colors.END, res[2][1]))
-        elif res[0][1] == res[1][1] and len(res[0][0].split(' ')) > 1 and len(res[1][0].split(' ')) > 1:
-            if len(res[0][0]) < len(res[1][0]):
-                print(
-                    '{}1: {}{} - score: {}'.format(Colors.BOLD + Colors.RED, res[0][0].upper(), Colors.END, res[0][1]))
-                print('{}2: {}{} - score: {}'.format(Colors.BOLD, res[1][0].upper(), Colors.END, 0))
-                print('{}3: {}{} - score: {}'.format(Colors.BOLD, res[2][0].upper(), Colors.END, res[2][1]))
-            else:
-                print(
-                    '{}1: {}{} - score: {}'.format(Colors.BOLD + Colors.RED, res[1][0].upper(), Colors.END, res[1][1]))
-                print('{}2: {}{} - score: {}'.format(Colors.BOLD, res[0][0].upper(), Colors.END, 0))
-                print('{}3: {}{} - score: {}'.format(Colors.BOLD, res[2][0].upper(), Colors.END, res[2][1]))
+            self._print_score(1, res, 0)
+            self._print_score(2, res, 1)
+            self._print_score(3, res, 2)
         else:
-            print('{}1: {}{} - score: {}'.format(Colors.BOLD + Colors.RED, res[0][0].upper(), Colors.END, res[0][1]))
-            print('{}2: {}{} - score: {}'.format(Colors.BOLD, res[1][0].upper(), Colors.END, res[1][1]))
-            print('{}3: {}{} - score: {}'.format(Colors.BOLD, res[2][0].upper(), Colors.END, res[2][1]))
+            self._print_score(1, res, 0, win=True)
+            self._print_score(2, res, 1)
+            self._print_score(3, res, 2)
+
+        return dict(res)
 
     def count_points(self, queries: List[str]):
         res = parallel_execution(self.pool, self.get_page, queries)
         points = parallel_execution(self.pool, self.get_points_from_texts, res)
         point = self.select_points(points)
-        self.print_results(point)
+        return self.print_results(point)
 
     def solve(self, instance: Instance):
         self._init(instance)
         self.clean()
         queries = self.craft_queries()
-        self.count_points(queries)
+        return self.count_points(queries)

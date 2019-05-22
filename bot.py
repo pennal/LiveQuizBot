@@ -30,6 +30,7 @@ if __name__ == '__main__':
     sp.add_argument('--test', help='Test screens', action='store_true')
     sp.add_argument('--dump', help='Dump questions', action='store_true')
     sp.add_argument('--test-dump', help='Test dump', action='store_true')
+    sp.add_argument('--table', help='Test dump', action='store_true')
     args = parser.parse_args()
 
     pool = ThreadPool(3)
@@ -58,26 +59,36 @@ if __name__ == '__main__':
             if exists:
                 with open('dump.txt') as json_file:
                     data = json.load(json_file, strict=False)
+                    switch = Switch(pool)
                     for index, file in enumerate(files('screenshot')):
                         if file.split('.')[1] == 'jpg' or file.split('.')[1] == 'png':
+                            print(file)
                             instance = img_to_text(file, pool, debug=False)
+                            point = switch.run(instance)
                             questions.append({
                                 'index': index,
                                 'question': instance.question,
+                                'solver': instance.solver.name,
                                 'answers': [
                                     {
                                         'first_answer': instance.first_answer,
-                                        'correct': False
+                                        'correct': False,
+                                        'bot': list(point.keys()).index(instance.first_answer) == 0 and point[instance.first_answer] != 0,
+                                        'points': point[instance.first_answer]
                                     },
                                     {
                                         'second_answer': instance.second_answer,
-                                        'correct': False
+                                        'correct': False,
+                                        'bot': list(point.keys()).index(instance.second_answer) == 0 and point[instance.second_answer] != 0,
+                                        'points': point[instance.second_answer]
                                     },
                                     {
                                         'third_answer': instance.third_answer,
-                                        'correct': False
+                                        'correct': False,
+                                        'bot': list(point.keys()).index(instance.third_answer) == 0 and point[instance.third_answer] != 0,
+                                        'points': point[instance.third_answer]
                                     }
-                                ]
+                                ],
                             })
                 d = json.dumps(questions)
                 with open('dump.txt', 'w') as the_file:
@@ -85,10 +96,10 @@ if __name__ == '__main__':
         elif args.test_dump:
             with open('dump_patty.txt') as json_file:
                 data = json.load(json_file, strict=False)
+                switch = Switch(pool)
                 for question in data:
                     instance = Instance.create_instance(question['question'], question['answers'][0]['first_answer'], question['answers'][1]['second_answer'], question['answers'][2]['third_answer'])
-                    print(instance.question)
-                    switch = Switch(pool)
+                    instance.print_question()
                     switch.run(instance)
                     key = input()
     except KeyboardInterrupt as _:

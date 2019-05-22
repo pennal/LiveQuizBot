@@ -29,5 +29,6 @@ class Switch:
     def run(self, instance: Instance):
         for solver in self.solvers:
             if solver.is_valid_type(instance):
-                solver.solve(instance)
-                break
+                return solver.solve(instance)
+
+
